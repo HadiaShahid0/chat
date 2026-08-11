@@ -123,7 +123,7 @@ const LoginForm = () => {
           </div>
 
           <button
-            className="btn btn-primary w-100"
+            className="btn btn-secondary w-100"
             disabled={loading}
           >
             {loading ? "Logging in..." : "Login"}

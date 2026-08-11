@@ -89,7 +89,7 @@ const Profile = () => {
   if (!user) {
     return (
       <div className="d-flex justify-content-center align-items-center vh-100">
-        <div className="spinner-border text-primary"></div>
+        <div className="spinner-border text-secondary"></div>
       </div>
     );
   }
@@ -152,16 +152,6 @@ const Profile = () => {
                   <h6 className="fw-bold">{user.name}</h6>
 
                   <p className="text-muted">{user.email}</p>
-
-                  <span
-                    className={`badge rounded-pill px-3 py-2 ${
-                      user.status === "online"
-                        ? "bg-success"
-                        : "bg-secondary"
-                    }`}
-                  >
-                    {user.status === "online" ? "Online" : "Offline"}
-                  </span>
                 </div>
               </div>
 
@@ -195,7 +185,7 @@ const Profile = () => {
 
               <div className="text-center">
                 <button
-                  className="btn btn-primary btn-lg px-5"
+                  className="btn btn-secondary btn-lg px-5"
                   onClick={handleSave}
                   disabled={loading}
                 >

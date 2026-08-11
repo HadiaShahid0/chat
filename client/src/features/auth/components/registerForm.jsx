@@ -127,7 +127,7 @@ const RegisterForm = () => {
             </div>
           </div>
 
-          <button className="btn btn-primary w-100" disabled={loading}>
+          <button className="btn btn-secondary w-100" disabled={loading}>
             {loading ? "Creating Account..." : "Register"}
           </button>
         </form>
