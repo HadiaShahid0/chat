@@ -3,69 +3,81 @@ import socket from "../../../services/socket";
 
 const useChatSocket = (currentUser, selectedUser, setMessages) => {
   useEffect(() => {
+    //Check the logged user exist if not then return
     if (!currentUser?._id) {
       return;
     }
 
-    // =========================
     // MESSAGE SENT
-    // =========================
-
     const handleMessageSent = (message) => {
-      // Only show if this is the
-      // currently selected chat
-
+        // Check the receiver who receives the message is whether that whose chat is selected, from this code it make sure the message belongs to the currently open chat.
       if (String(message.receiver) !== String(selectedUser?._id)) {
         return;
       }
 
-      setMessages((prev) => [...prev, message]);
+      //prev means the current message already stored in react state
+      setMessages((prev) => {
+        // Prevent duplicate messages
+        const exists = prev.some(
+          (item) => String(item._id) === String(message._id),
+        );
+
+        if (exists) {
+          return prev;
+        }
+
+        //keep all the previous message and add the current message at the end
+        return [...prev, message];
+      });
     };
 
-    // =========================
     // RECEIVE MESSAGE
-    // =========================
-
     const handleReceiveMessage = (message) => {
-      // Only add message if it belongs
-      // to the currently open chat
-
+      // Only add the message if it belongs to the open chat
       if (String(message.sender) !== String(selectedUser?._id)) {
         return;
       }
 
-      setMessages((prev) => [...prev, message]);
+      setMessages((prev) => {
+        // Prevent duplicate messages
+        const exists = prev.some(
+          (item) => String(item._id) === String(message._id),
+        );
+
+        if (exists) {
+          return prev;
+        }
+
+        return [...prev, message];
+      });
     };
 
-    // =========================
-    // MESSAGE DELIVERED
-    // =========================
-
-    const handleMessageDelivered = ({ messageId }) => {
+    // MESSAGE STATUS UPDATE
+    const handleMessageStatusUpdate = ({
+      messageId,
+      status,
+      senderId,
+      receiverId,
+    }) => {
       setMessages((prev) =>
         prev.map((message) => {
-          if (String(message._id) === String(messageId)) {
+          // If messageId is provided,  update only that message
+            //Is this the message whose status needs to change?
+          if (messageId && String(message._id) === String(messageId)) {
             return {
               ...message,
-              status: "delivered",
+              status,
             };
           }
 
-          return message;
-        }),
-      );
-    };
+          // Used when multiple messages are marked as seen
 
-    // =========================
-    // MESSAGES SEEN
-    // =========================
-
-    const handleMessagesSeen = ({ seenBy }) => {
-      setMessages((prev) =>
-        prev.map((message) => {
           if (
+            status === "seen" &&
+            senderId &&
+            receiverId &&
             String(message.sender) === String(currentUser._id) &&
-            String(message.receiver) === String(seenBy)
+            String(message.receiver) === String(receiverId)
           ) {
             return {
               ...message,
@@ -78,22 +90,20 @@ const useChatSocket = (currentUser, selectedUser, setMessages) => {
       );
     };
 
+    // LISTEN TO SOCKET EVENTS
     socket.on("messageSent", handleMessageSent);
 
     socket.on("receiveMessage", handleReceiveMessage);
 
-    socket.on("messageDelivered", handleMessageDelivered);
+    socket.on("messageStatusUpdate", handleMessageStatusUpdate);
 
-    socket.on("messagesSeen", handleMessagesSeen);
-
+    // CLEANUP
     return () => {
       socket.off("messageSent", handleMessageSent);
 
       socket.off("receiveMessage", handleReceiveMessage);
 
-      socket.off("messageDelivered", handleMessageDelivered);
-
-      socket.off("messagesSeen", handleMessagesSeen);
+      socket.off("messageStatusUpdate", handleMessageStatusUpdate);
     };
   }, [currentUser, selectedUser, setMessages]);
 };
