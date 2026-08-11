@@ -1,22 +1,55 @@
-import { BsChatDotsFill, BsPersonCircle, BsBoxArrowRight } from "react-icons/bs";
-import { Link } from "react-router-dom";
+import {
+  BsChatDotsFill,
+  BsPersonCircle,
+  BsBoxArrowRight,
+} from "react-icons/bs";
 
-const NavigationSidebar = ({ user, onLogout }) => {
+import { Link, useLocation } from "react-router-dom";
+
+
+const NavigationSidebar = ({
+  user,
+  onLogout,
+}) => {
+  const location = useLocation();
+
+
+  const isChatActive =
+    location.pathname.startsWith("/chat");
+
+  const isProfileActive =
+    location.pathname === "/profile";
+
+
   return (
     <div
-      className="d-flex flex-column align-items-center justify-content-between bg-dark text-white py-4"
-      style={{ width: "60px", height: "100vh" }}
+      className="d-flex flex-column align-items-center justify-content-between bg-dark text-white py-3"
+      style={{
+        width: "70px",
+        height: "100vh",
+        flexShrink: 0,
+      }}
     >
-      {/* Top Section */}
+
+      {/* =========================
+          TOP SECTION
+      ========================= */}
+
       <div className="d-flex flex-column align-items-center gap-4">
-        <Link to="/profile">
+
+        {/* Profile Image */}
+
+        <Link
+          to="/profile"
+          className="text-decoration-none"
+        >
           <img
             src={
               user?.profileImage
                 ? `http://localhost:5000/${user.profileImage}`
                 : `https://ui-avatars.com/api/?name=${encodeURIComponent(
-                    user?.name || "User"
-                  )}`
+                    user?.name || "User",
+                  )}&background=random`
             }
             alt="Profile"
             className="rounded-circle border border-2 border-light"
@@ -24,38 +57,58 @@ const NavigationSidebar = ({ user, onLogout }) => {
               width: "45px",
               height: "45px",
               objectFit: "cover",
-              cursor: "pointer",
             }}
           />
         </Link>
 
+
+        {/* Chat */}
+
         <Link
-          to="/chat"
-          className="text-white"
+          to="/chat/users"
+          className={`text-decoration-none rounded p-2 ${
+            isChatActive
+              ? "bg-secondary text-white"
+              : "text-white"
+          }`}
           title="Chats"
         >
-          <BsChatDotsFill size={24} />
+          <BsChatDotsFill size={23} />
         </Link>
+
+
+        {/* Profile */}
 
         <Link
           to="/profile"
-          className="text-white"
+          className={`text-decoration-none rounded p-2 ${
+            isProfileActive
+              ? "bg-secondary text-white"
+              : "text-white"
+          }`}
           title="Profile"
         >
-          <BsPersonCircle size={24} />
+          <BsPersonCircle size={23} />
         </Link>
+
       </div>
 
-      {/* Bottom Section */}
+
+      {/* =========================
+          LOGOUT
+      ========================= */}
+
       <button
-        className="btn btn-link text-white p-0"
+        className="btn btn-link text-white p-2 rounded"
         onClick={onLogout}
         title="Logout"
       >
-        <BsBoxArrowRight size={24}  />
+        <BsBoxArrowRight size={23} />
       </button>
+
     </div>
   );
 };
+
 
 export default NavigationSidebar;

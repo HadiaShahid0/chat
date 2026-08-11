@@ -4,7 +4,11 @@ import {
   uploadProfileImageService,
   getAllUsersService,
 } from "../../services/userServices.js";
-import { onlineUsers } from "../../utils/socketHelper.js";
+
+// ===============================
+// GET CURRENT USER
+// ===============================
+
 export const getCurrentUser = async (req, res) => {
   try {
     const user = await getCurrentUserService(req.user._id);
@@ -21,6 +25,10 @@ export const getCurrentUser = async (req, res) => {
   }
 };
 
+// ===============================
+// UPDATE PROFILE
+// ===============================
+
 export const updateProfile = async (req, res) => {
   try {
     const { name } = req.body;
@@ -29,6 +37,8 @@ export const updateProfile = async (req, res) => {
 
     const io = req.app.get("io");
 
+    // Tell all connected users
+    // that this profile was updated
     io.emit("profileUpdated", {
       user: {
         _id: user._id,
@@ -50,6 +60,10 @@ export const updateProfile = async (req, res) => {
   }
 };
 
+// ===============================
+// UPLOAD PROFILE IMAGE
+// ===============================
+
 export const uploadProfileImage = async (req, res) => {
   try {
     if (!req.file) {
@@ -58,14 +72,12 @@ export const uploadProfileImage = async (req, res) => {
 
     const imagePath = `uploads/profileAvatars/${req.file.filename}`;
 
-    const user = await uploadProfileImageService(
-      req.user._id,
-      imagePath
-    );
+    const user = await uploadProfileImageService(req.user._id, imagePath);
 
     const io = req.app.get("io");
 
-    // Notify all connected users
+    // Tell all connected users
+    // that profile image changed
     io.emit("profileUpdated", {
       user: {
         _id: user._id,
@@ -86,6 +98,10 @@ export const uploadProfileImage = async (req, res) => {
     });
   }
 };
+
+// ===============================
+// GET ALL USERS
+// ===============================
 
 export const getAllUsers = async (req, res) => {
   try {

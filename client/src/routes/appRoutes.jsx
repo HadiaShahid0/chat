@@ -2,6 +2,7 @@ import { Routes, Route } from "react-router-dom";
 import Login from "../features/auth/pages/login";
 import Register from "../features/auth/pages/register";
 import ChatPage from "../features/chat/pages/chatPage";
+import ChatUsers from "../features/chat/pages/chatUsers";
 import ProtectedRoute from "./protectedRoutes";
 import Profile from "../features/profile/pages/profile";
 import AppLayout from "../components/layout/AppLayout";
@@ -22,8 +23,9 @@ const AppRoutes = () => {
           </ProtectedRoute>
         }
       >
-        <Route path="/chat" element={<ChatPage />} />
+ <Route path="/chat/users" element={<ChatUsers />} />
 
+        <Route path="/chat/:userId" element={<ChatPage />} />
         <Route path="/profile" element={<Profile />} />
         {/* <Route path="/groups" element={<GroupPage />} /> */}
       </Route>

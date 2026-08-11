@@ -1,21 +1,33 @@
 import dotenv from "dotenv";
+dotenv.config();
+
 import express from "express";
 import http from "http";
 import cors from "cors";
 import cookieParser from "cookie-parser";
-import connectDB from "../config/db.js";
+import path from "path";
+
+import connectDB from "./config/db.js";
 import routes from "./routes/index.js";
 import socketHelper from "./utils/socketHelper.js";
-import path from "path";
-dotenv.config();
+
 const app = express();
 
+// Connect MongoDB
+connectDB();
+
+// Create HTTP server
 const server = http.createServer(app);
 
+// Create Socket.IO
 const io = socketHelper(server);
+
+// Make io available in controllers
 app.set("io", io);
 
+// Middleware
 app.use(express.json());
+
 app.use(cookieParser());
 
 app.use(
@@ -24,12 +36,14 @@ app.use(
     credentials: true,
   }),
 );
+
+// Static uploads
 app.use("/uploads", express.static(path.join(process.cwd(), "src/uploads")));
 
-connectDB();
-
+// Routes
 routes(app);
 
+// Start server
 const PORT = process.env.PORT || 5000;
 
 server.listen(PORT, () => {
