@@ -3,6 +3,7 @@ import { Server } from "socket.io";
 import {
   createMessageService,
   markMessagesSeenService,
+  markMessagesDeliveredService,
 } from "../services/messageServices.js";
 
 const socketHelper = (server) => {
@@ -17,28 +18,50 @@ const socketHelper = (server) => {
     console.log("Socket connected:", socket.id);
 
     // JOIN USER ROOM
-    socket.on("join", (userId) => {
-      const room = `user:${userId}`;
+    socket.on("join", async (userId) => {
+      try {
+        //save the userId in socket
+        const userChat = `user:${userId}`;
 
-      socket.join(room);
+        //join the userChat
+        socket.join(userChat);
 
-      console.log(`User ${userId} joined`);
+        console.log(`User ${userId} joined`);
+
+        // Mark old sent messages as delivered
+        //Need await here because after updating the db we used it for changing the status
+        const pendingMessages = await markMessagesDeliveredService(userId);
+
+        // Tell senders that their messages are delivered
+        for (const message of pendingMessages) {
+          io.to(`user:${message.sender}`).emit("messageStatusUpdate", {
+            messageId: message._id,
+            status: "delivered",
+          });
+        }
+      } catch (error) {
+        console.log("Join error:", error.message);
+      }
     });
 
     // OPEN CHAT
     socket.on("openChat", ({ userId, otherUserId }) => {
-      const room = `chat:${userId}:${otherUserId}`;
+      //save the userId and receiver id to check later whether the chat is opened or not
+      const chatRoom = `chat:${userId}:${otherUserId}`;
 
-      socket.join(room);
+      //join
+      socket.join(chatRoom);
 
       console.log(`User ${userId} opened chat with ${otherUserId}`);
     });
 
     // CLOSE CHAT
     socket.on("closeChat", ({ userId, otherUserId }) => {
-      const room = `chat:${userId}:${otherUserId}`;
+      //save the userId and receiver id to check later whether the chat is opened or not
+      const chatRoom = `chat:${userId}:${otherUserId}`;
 
-      socket.leave(room);
+      //leave
+      socket.leave(chatRoom);
 
       console.log(`User ${userId} closed chat with ${otherUserId}`);
     });
@@ -46,64 +69,50 @@ const socketHelper = (server) => {
     // SEND MESSAGE
     socket.on("sendMessage", async ({ senderId, receiverId, text }) => {
       try {
-        if (!text?.trim()) {
-          return;
-        }
+        if (!text?.trim()) return;
 
-        // 1. Save message
+        //call the service where the message creates
         const message = await createMessageService(senderId, receiverId, text);
 
-        // 2. Send saved message back to sender
+        // Show message to sender
         socket.emit("messageSent", message);
 
-        // Receiver's personal room
         const receiverRoom = `user:${receiverId}`;
 
-        // 3. Check if receiver is connected
+        // Check if receiver is online and chat is opened
         const receiverSockets = await io.in(receiverRoom).fetchSockets();
 
-        // Receiver is offline
+        //means user is offline
         if (receiverSockets.length === 0) {
           return;
         }
 
-        // RECEIVER IS ONLINE
+        // Check if receiver has this chat open, create a variable chatRoom where we put the receiverId & senderId to check whether the chat is opened or not
         const chatRoom = `chat:${receiverId}:${senderId}`;
 
-        // 4. Check if receiver has this chat open
+        //Check whether the current chat is opened on receiver side or not 
+        // by fetching all the sockets and check the chatroom socket
         const chatSockets = await io.in(chatRoom).fetchSockets();
 
-        // CHAT IS OPEN
-        if (chatSockets.length > 0) {
-          message.status = "seen";
+        //if open then it's length is greater than zero
+        const isChatOpen = chatSockets.length > 0;
 
-          await message.save();
+        // Set message status
+        message.status = isChatOpen ? "seen" : "delivered";
 
-          // Send message to receiver
-          io.to(receiverRoom).emit("receiveMessage", message);
-
-          // Update sender
-          socket.emit("messageStatusUpdate", {
-            messageId: message._id,
-            status: "seen",
-          });
-
-          return;
-        }
-
-        // CHAT IS NOT OPEN
-        message.status = "delivered";
-
-        await message.save();
+        // Don't use await here because the message is saved to the database.
+        message.save();
 
         // Send message to receiver
         io.to(receiverRoom).emit("receiveMessage", message);
 
-        // Update sender
+        // Update sender status
         socket.emit("messageStatusUpdate", {
           messageId: message._id,
-          status: "delivered",
+          status: message.status,
+          receiverId,
         });
+        
       } catch (error) {
         console.log("Send message error:", error.message);
       }
@@ -112,15 +121,16 @@ const socketHelper = (server) => {
     // MARK MESSAGES AS SEEN
     socket.on("markSeen", async ({ receiverId, senderId }) => {
       try {
-        // Update MongoDB
-        await markMessagesSeenService(receiverId, senderId);
+        // Don't use await here because we only call the service to save the data to the database.
+        markMessagesSeenService(receiverId, senderId);
 
-        // Tell sender
+        //update the message status
         io.to(`user:${senderId}`).emit("messageStatusUpdate", {
           senderId,
           receiverId,
           status: "seen",
         });
+        
       } catch (error) {
         console.log("Mark seen error:", error.message);
       }

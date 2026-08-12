@@ -8,7 +8,6 @@ import Profile from "../features/profile/pages/profile";
 import AppLayout from "../components/layout/AppLayout";
 // import GroupPage from "../features/group/pages/groupPage";
 
-
 const AppRoutes = () => {
   return (
     <Routes>
@@ -23,7 +22,7 @@ const AppRoutes = () => {
           </ProtectedRoute>
         }
       >
- <Route path="/chat/users" element={<ChatUsers />} />
+        <Route path="/chat/users" element={<ChatUsers />} />
 
         <Route path="/chat/:userId" element={<ChatPage />} />
         <Route path="/profile" element={<Profile />} />

@@ -3,39 +3,50 @@ import ChatBubble from "./chatBubble";
 import socket from "../../../services/socket";
 
 const ChatWindow = ({ currentUser, selectedUser, messages = [] }) => {
+  // Store the message text entered by the user
   const [text, setText] = useState("");
 
+  // Create a reference to the end of the messages list
   const messagesEndRef = useRef(null);
 
-  // Scroll to bottom whenever messages change
+  // Scroll to the bottom whenever messages change
   useEffect(() => {
+    // Automatically scroll to the latest message 
+    // when the chat opens or a new message is added
     messagesEndRef.current?.scrollIntoView({
       behavior: "smooth",
     });
   }, [messages]);
 
+  // Send a message
   const sendMessage = () => {
+    // Stop if the message text is empty
     if (!text.trim()) {
       return;
     }
 
+    // Stop if the current user ID is not available
     if (!currentUser?._id) {
       return;
     }
 
+    // Stop if the selected user's ID is not available
     if (!selectedUser?._id) {
       return;
     }
 
+    // Send the message to the server through Socket.IO
     socket.emit("sendMessage", {
       senderId: currentUser._id,
       receiverId: selectedUser._id,
       text: text.trim(),
     });
 
+    // Clear the input after sending the message
     setText("");
   };
 
+  // Send the message when the user presses the Enter key
   const handleKeyDown = (e) => {
     if (e.key === "Enter") {
       e.preventDefault();
@@ -45,9 +56,7 @@ const ChatWindow = ({ currentUser, selectedUser, messages = [] }) => {
 
   return (
     <div className="d-flex flex-column h-100">
-      {/* =========================
-          MESSAGES
-      ========================= */}
+      {/* MESSAGES*/}
 
       <div
         className="flex-grow-1 overflow-auto p-4"
@@ -82,9 +91,7 @@ const ChatWindow = ({ currentUser, selectedUser, messages = [] }) => {
         <div ref={messagesEndRef} />
       </div>
 
-      {/* =========================
-          MESSAGE INPUT
-      ========================= */}
+      {/* MESSAGE INPUT*/}
 
       <div className="bg-white border-top p-3">
         <div className="input-group">

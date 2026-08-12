@@ -45,7 +45,7 @@ const LoginForm = () => {
 
       // Join personal room
       socket.emit("join", response.user._id);
-      navigate("/chat");
+      navigate("/chat/users");
     } catch (error) {
       alert(error.message);
     } finally {
