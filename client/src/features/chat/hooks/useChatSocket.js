@@ -3,109 +3,82 @@ import socket from "../../../services/socket";
 
 const useChatSocket = (currentUser, selectedUser, setMessages) => {
   useEffect(() => {
-    //Check the logged user exist if not then return
+    // Do nothing until the logged-in user is available
     if (!currentUser?._id) {
       return;
     }
 
-    // MESSAGE SENT
-    const handleMessageSent = (message) => {
-        // Check the receiver who receives the message is whether that whose chat is selected, from this code it make sure the message belongs to the currently open chat.
-      if (String(message.receiver) !== String(selectedUser?._id)) {
-        return;
-      }
-
-      //prev means the current message already stored in react state
-      setMessages((prev) => {
-        // Prevent duplicate messages
-        const exists = prev.some(
-          (item) => String(item._id) === String(message._id),
-        );
-
-        if (exists) {
-          return prev;
-        }
-
-        //keep all the previous message and add the current message at the end
-        return [...prev, message];
+    // Add a message to the current chat, get all the previous messages and add the latest message at the end
+    const addMessage = (message) => {
+      setMessages((prevMessages) => {
+        return [...prevMessages, message];
       });
     };
 
-    // RECEIVE MESSAGE
+    // When the sender successfully sends a message
+    const handleMessageSent = (message) => {
+      addMessage(message);
+    };
+
+    // When the receiver gets a new message
     const handleReceiveMessage = (message) => {
-      // Only add the message if it belongs to the open chat
+
+      // Make sure this message belongs to the receiver/selectedUser
       if (String(message.sender) !== String(selectedUser?._id)) {
         return;
       }
 
-      setMessages((prev) => {
-        // Prevent duplicate messages
-        const exists = prev.some(
-          (item) => String(item._id) === String(message._id),
-        );
-
-        if (exists) {
-          return prev;
-        }
-
-        return [...prev, message];
-      });
+      addMessage(message);
     };
 
-    // MESSAGE STATUS UPDATE
-    const handleMessageStatusUpdate = ({
-      messageId,
-      status,
-      senderId,
-      receiverId,
-    }) => {
-      setMessages((prev) =>
-        prev.map((message) => {
-          // If messageId is provided,  update only that message
-            //Is this the message whose status needs to change?
-          if (messageId && String(message._id) === String(messageId)) {
-            return {
-              ...message,
-              status,
-            };
-          }
+    // When the message status changes
+    const handleMessageStatusUpdate = ({ messageId, status, receiverId }) => {
+      setMessages((prevMessages) =>
 
-          // Used when multiple messages are marked as seen
+        // Go through all existing messages
+        prevMessages.map((message) => {
+          //messageId condition handles one specific message,
+          // while isBulkSeenUpdate handles multiple messages becoming seen at once.
 
-          if (
-            status === "seen" &&
-            senderId &&
-            receiverId &&
+          // Check if this is the specific message whose status changed
+          const isTargetMessage =
+            messageId && String(message._id) === String(messageId);
+
+          // the message was sent by me,
+          // and it was sent to the receiver who saw it
+          
+          const isBulkSeenUpdate =
+          //if remove sender compare with currentUser Id and the receiver is offline
+          //  when it logins it directs seen the message 
+          // without deliver it and even the chat is not opened
             String(message.sender) === String(currentUser._id) &&
-            String(message.receiver) === String(receiverId)
-          ) {
-            return {
-              ...message,
-              status: "seen",
-            };
+            String(message.receiver) === String(receiverId);
+
+          // If either condition is true,
+          // update this message's status
+          if (isTargetMessage || isBulkSeenUpdate) {
+            return { ...message, status };
           }
 
+          // Otherwise, keep the message unchanged
           return message;
         }),
       );
     };
 
-    // LISTEN TO SOCKET EVENTS
+    // Listen for socket events
     socket.on("messageSent", handleMessageSent);
-
     socket.on("receiveMessage", handleReceiveMessage);
-
     socket.on("messageStatusUpdate", handleMessageStatusUpdate);
 
-    // CLEANUP
+    // Remove listeners when component is closed/changed
     return () => {
+
       socket.off("messageSent", handleMessageSent);
-
       socket.off("receiveMessage", handleReceiveMessage);
-
       socket.off("messageStatusUpdate", handleMessageStatusUpdate);
     };
-  }, [currentUser, selectedUser, setMessages]);
+  }, [currentUser, selectedUser, setMessages]);// Runs when currentUser, selectedUser, or setMessages changes.
 };
 
 export default useChatSocket;

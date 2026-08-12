@@ -27,8 +27,8 @@ const Profile = () => {
       currentUser.profileImage
         ? `http://localhost:5000/${currentUser.profileImage}?t=${Date.now()}`
         : `https://ui-avatars.com/api/?name=${encodeURIComponent(
-            currentUser.name
-          )}&background=0D6EFD&color=fff&size=200`
+            currentUser.name,
+          )}&background=0D6EFD&color=fff&size=200`,
     );
   }, [currentUser]);
 
@@ -44,8 +44,8 @@ const Profile = () => {
           response.user.profileImage
             ? `http://localhost:5000/${response.user.profileImage}?t=${Date.now()}`
             : `https://ui-avatars.com/api/?name=${encodeURIComponent(
-                response.user.name
-              )}&background=0D6EFD&color=fff&size=200`
+                response.user.name,
+              )}&background=0D6EFD&color=fff&size=200`,
         );
       }
     } catch (error) {
@@ -158,9 +158,7 @@ const Profile = () => {
               <hr className="my-5" />
 
               <div className="mb-4">
-                <label className="form-label fw-semibold">
-                  Full Name
-                </label>
+                <label className="form-label fw-semibold">Full Name</label>
 
                 <input
                   type="text"
@@ -171,9 +169,7 @@ const Profile = () => {
               </div>
 
               <div className="mb-4">
-                <label className="form-label fw-semibold">
-                  Email Address
-                </label>
+                <label className="form-label fw-semibold">Email Address</label>
 
                 <input
                   type="email"

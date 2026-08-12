@@ -6,20 +6,12 @@ import {
 
 import { Link, useLocation } from "react-router-dom";
 
-
-const NavigationSidebar = ({
-  user,
-  onLogout,
-}) => {
+const NavigationSidebar = ({ user, onLogout }) => {
   const location = useLocation();
 
+  const isChatActive = location.pathname.startsWith("/chat");
 
-  const isChatActive =
-    location.pathname.startsWith("/chat");
-
-  const isProfileActive =
-    location.pathname === "/profile";
-
+  const isProfileActive = location.pathname === "/profile";
 
   return (
     <div
@@ -30,19 +22,12 @@ const NavigationSidebar = ({
         flexShrink: 0,
       }}
     >
-
-      {/* =========================
-          TOP SECTION
-      ========================= */}
+      {/*TOP SECTION*/}
 
       <div className="d-flex flex-column align-items-center gap-4">
-
         {/* Profile Image */}
 
-        <Link
-          to="/profile"
-          className="text-decoration-none"
-        >
+        <Link to="/profile" className="text-decoration-none">
           <img
             src={
               user?.profileImage
@@ -61,42 +46,32 @@ const NavigationSidebar = ({
           />
         </Link>
 
-
         {/* Chat */}
 
         <Link
           to="/chat/users"
           className={`text-decoration-none rounded p-2 ${
-            isChatActive
-              ? "bg-secondary text-white"
-              : "text-white"
+            isChatActive ? "bg-secondary text-white" : "text-white"
           }`}
           title="Chats"
         >
           <BsChatDotsFill size={23} />
         </Link>
 
-
         {/* Profile */}
 
         <Link
           to="/profile"
           className={`text-decoration-none rounded p-2 ${
-            isProfileActive
-              ? "bg-secondary text-white"
-              : "text-white"
+            isProfileActive ? "bg-secondary text-white" : "text-white"
           }`}
           title="Profile"
         >
           <BsPersonCircle size={23} />
         </Link>
-
       </div>
 
-
-      {/* =========================
-          LOGOUT
-      ========================= */}
+      {/* LOGOUT*/}
 
       <button
         className="btn btn-link text-white p-2 rounded"
@@ -105,10 +80,8 @@ const NavigationSidebar = ({
       >
         <BsBoxArrowRight size={23} />
       </button>
-
     </div>
   );
 };
-
 
 export default NavigationSidebar;

@@ -11,57 +11,72 @@ import socket from "../../../services/socket";
 import useChatSocket from "../hooks/useChatSocket";
 
 const ChatPage = () => {
+  // Get the userId from the URL
   const { userId } = useParams();
 
+  // Used for navigation between pages
   const navigate = useNavigate();
 
+  // Get the current user from the parent component
   const { currentUser } = useOutletContext();
 
+  // Store the currently selected user
   const [selectedUser, setSelectedUser] = useState(null);
 
+  // Store the messages for the current chat
   const [messages, setMessages] = useState([]);
 
   // GET SELECTED USER
 
   useEffect(() => {
     if (!userId) return;
-
+    //Load user fucntion call
     // eslint-disable-next-line react-hooks/immutability
     loadUser();
   }, [userId]);
 
+  // Load all users
   const loadUser = async () => {
     try {
+      // Call the getAllUsers service from Chat Services
       const data = await getAllUsers();
 
+      // Stop if users were not fetched successfully
       if (!data.success) {
         return;
       }
 
+      // Find the user whose ID matches the userId from the URL
       const user = data.users.find(
         (item) => String(item._id) === String(userId),
       );
 
+      // Set the selected user for the current chat
       setSelectedUser(user || null);
     } catch (error) {
       console.log("User error:", error);
     }
   };
 
-  // GET MESSAGES
+  // Get messages when the current user or selected chat changes
   useEffect(() => {
+    // Stop if the current user ID or URL user ID is not available
     if (!currentUser?._id || !userId) {
       return;
     }
+
+    // Call loadMessages to get the chat messages
     // eslint-disable-next-line react-hooks/immutability
     loadMessages();
 
+    // Tell the server that the current user opened this chat
     socket.emit("openChat", {
       userId: currentUser._id,
       otherUserId: userId,
     });
 
     return () => {
+      // Tell the server that the current user closed this chat
       socket.emit("closeChat", {
         userId: currentUser._id,
         otherUserId: userId,
@@ -71,16 +86,17 @@ const ChatPage = () => {
 
   const loadMessages = async () => {
     try {
+      // Get messages for the user whose ID is in the URL
       const data = await getMessages(userId);
 
+      // Continue only if the messages were fetched successfully
       if (data.success) {
+        // Store the fetched messages in the messages state
         setMessages(data.messages || []);
 
-        // Mark messages as seen
-
+        // Mark messages from the selected user as seen
         socket.emit("markSeen", {
           receiverId: currentUser._id,
-
           senderId: userId,
         });
       }
