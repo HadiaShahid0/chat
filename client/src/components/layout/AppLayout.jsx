@@ -6,7 +6,6 @@ import NavigationSidebar from "../common/navigationSidebar";
 import { verify, logout } from "../../features/auth/services/authServices";
 
 import socket from "../../services/socket";
-
 const AppLayout = () => {
   const navigate = useNavigate();
 

@@ -1,4 +1,4 @@
-import Message from "../models/messageModal.js";
+import Message from "../models/messageModel.js";
 
 // Create a message
 export const createMessageService = async (senderId, receiverId, text) => {

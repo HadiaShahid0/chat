@@ -10,6 +10,9 @@ import socket from "../../../services/socket";
 
 import useChatSocket from "../hooks/useChatSocket";
 
+import { BsFillTelephoneFill } from "react-icons/bs";
+
+import AudioCall from "../../call/components/audioCall";
 const ChatPage = () => {
   // Get the userId from the URL
   const { userId } = useParams();
@@ -26,11 +29,12 @@ const ChatPage = () => {
   // Store the messages for the current chat
   const [messages, setMessages] = useState([]);
 
-  // GET SELECTED USER
+  const { startCall } = useOutletContext();
 
+  //loadUsers
   useEffect(() => {
     if (!userId) return;
-    //Load user fucntion call
+    //Load user function call
     // eslint-disable-next-line react-hooks/immutability
     loadUser();
   }, [userId]);
@@ -107,8 +111,13 @@ const ChatPage = () => {
 
   // SOCKET
   useChatSocket(currentUser, selectedUser, setMessages);
+  const handleCall = () => {
+    if (!selectedUser?._id) {
+      return;
+    }
 
-  // LOADING
+    startCall(selectedUser._id);
+  };
 
   if (!selectedUser) {
     return (
@@ -125,7 +134,6 @@ const ChatPage = () => {
       <div className="bg-white border-bottom p-3">
         <div className="d-flex align-items-center">
           {/* Back */}
-
           <button
             className="btn btn-light rounded-circle me-3"
             onClick={() => navigate("/chat/users")}
@@ -134,7 +142,6 @@ const ChatPage = () => {
           </button>
 
           {/* Profile */}
-
           <img
             src={
               selectedUser.profileImage
@@ -153,12 +160,19 @@ const ChatPage = () => {
           />
 
           {/* Name */}
-
           <div className="ms-3">
             <h6 className="mb-0 fw-semibold">{selectedUser.name}</h6>
 
             <small className="text-muted">{selectedUser.email}</small>
           </div>
+
+          {/* Call button */}
+          <button
+            className="btn btn-light rounded-circle ms-auto d-flex justify-content-center align-items-center"
+            onClick={handleCall}
+          >
+            <BsFillTelephoneFill size={22} color="black" />
+          </button>
         </div>
       </div>
 
