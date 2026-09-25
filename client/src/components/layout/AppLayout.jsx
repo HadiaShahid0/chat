@@ -31,7 +31,7 @@ const AppLayout = () => {
 
   // SOCKET
   useEffect(() => {
-    if (!user?._id) {
+    if (!user?.id) {
       return;
     }
 
@@ -39,7 +39,7 @@ const AppLayout = () => {
     const onConnect = () => {
       console.log("Socket Connected:", socket.id);
 
-      socket.emit("join", user._id);
+      socket.emit("join", user.id);
     };
     //disconnect the socket
     const onDisconnect = () => {
@@ -48,7 +48,7 @@ const AppLayout = () => {
 
     const profileUpdatedHandler = ({ user: updatedUser }) => {
       // Stop if the updated user's ID does not match the current user's ID
-      if (String(updatedUser._id) !== String(user._id)) {
+      if (String(updatedUser.id) !== String(user.id)) {
         return;
       }
 

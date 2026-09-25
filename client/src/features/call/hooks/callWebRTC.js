@@ -1,340 +1,336 @@
 import { useEffect, useRef } from "react";
 import socket from "../../../services/socket";
-// useRef is used to store WebRTC objects without causing React re-renders.
-// WebRTC uses this configuration when creating a connection.
-// iceServers is empty for now because STUN/TURN has not been added yet.
+
+// WebRTC configuration.
+// STUN/TURN servers can be added here later.
 const rtcConfig = {
   iceServers: [],
 };
 
-// This custom hook contains all WebRTC audio-call logic.
 const useWebRTC = ({ currentUser, otherUserId, isCaller, callAccepted }) => {
-  // Stores the WebRTC connection.
-  // We use useRef because the same connection must be kept between renders.
-  const peerConnectionRef = useRef(null);
+  // Store the WebRTC peer connection.
+  const peerRef = useRef(null);
 
-  // Stores the current user's microphone stream.
-  // We need this stream to send our voice to the other user.
+  // Store the current user's microphone stream.
   const localStreamRef = useRef(null);
 
-  // Stores ICE candidates that arrive before the WebRTC connection is ready.
-  // These candidates are added later when the remote description is available.
-  const pendingCandidatesRef = useRef([]);
+  // Store ICE candidates that arrive before
+  // the WebRTC connection is ready.
+  const candidatesRef = useRef([]);
 
-  // Gets access to the current user's microphone.
-  // This function is used when we create the WebRTC connection.
+  // MICROPHONE
+
   const getLocalStream = async () => {
     // If we already have the microphone stream,
-    // return it instead of asking for microphone permission again.
+    // return it instead of asking for permission again.
     if (localStreamRef.current) {
       return localStreamRef.current;
     }
 
+    // If we don't have a microphone stream,
+    // ask the browser for microphone access.
     try {
-      // Ask the browser for microphone access.
-      // We only need audio because this is an audio call.
       const stream = await navigator.mediaDevices.getUserMedia({
         audio: true,
       });
 
-      // Save the microphone stream.
-      // This allows us to use the same stream again during the call.
+      // Store the microphone stream
+      // so we can reuse it during the call.
       localStreamRef.current = stream;
 
-      // Return the microphone stream to the caller.
+      // Return the microphone stream.
       return stream;
     } catch (error) {
-      // This happens if the browser cannot access the microphone
-      // or the user does not give microphone permission.
-      console.error("Microphone access error:", error);
+      console.error("Microphone error:", error);
 
-      // Return null because we could not get the microphone.
       return null;
     }
   };
 
-  // Creates the WebRTC connection between the two users.
-  // This function is used by both the caller and receiver.
-  const createPeerConnection = async () => {
-    // If a WebRTC connection already exists,
-    // return the existing connection instead of creating another one.
-    if (peerConnectionRef.current) {
-      return peerConnectionRef.current;
+  // CREATE PEER
+  //create a connection between two devices
+  //call getLocalStream
+  //get audio tracks
+  //when audio from the other user
+  // reaches our browser.
+  //ICE CANDIDATE
+  const createPeer = async () => {
+    // If a peer connection already exists,
+    // return the existing connection.
+    if (peerRef.current) {
+      return peerRef.current;
     }
 
-    // Create a new WebRTC connection using our configuration.
-    const peerConnection = new RTCPeerConnection(rtcConfig);
+    // Create a new WebRTC peer connection.
+    //manages the direct connection and media streaming between two devices
+    const peer = new RTCPeerConnection(rtcConfig);
 
-    // Save the connection so other functions can use the same connection.
-    peerConnectionRef.current = peerConnection;
+    // Store the peer connection
+    // so we can use the same connection later.
+    peerRef.current = peer;
 
-    // Get the current user's microphone.
-    const localStream = await getLocalStream();
+    // Get the current user's microphone stream.
+    const stream = await getLocalStream();
 
-    // If microphone access was successful,
-    // add the microphone tracks to the WebRTC connection.
-    if (localStream) {
-      // getTracks() gets the audio tracks from the microphone.
-      // addTrack() tells WebRTC to send those tracks to the other user.
-      localStream.getTracks().forEach((track) => {
-        peerConnection.addTrack(track, localStream);
+    // Add the microphone tracks to WebRTC.
+    if (stream) {
+      // Get the audio tracks from the microphone stream
+      // and add them to the peer connection.
+      // This allows us to send our audio to the other user.
+      stream.getTracks().forEach((track) => {
+        peer.addTrack(track, stream);
       });
     }
 
-    // This event runs when audio from the other user reaches our browser.
-    peerConnection.ontrack = (event) => {
-      // Find the audio element from our React component.
-      const remoteAudio = document.getElementById("remoteAudio");
+    // RECEIVE AUDIO
 
-      // Check that the audio element and remote stream exist.
-      if (remoteAudio && event.streams[0]) {
-        // Connect the other user's audio stream to the audio element.
-        remoteAudio.srcObject = event.streams[0];
+    // This runs when audio from the other user
+    // reaches our browser.
+    peer.ontrack = (event) => {
+      // Get the audio element from AudioCall component.
+      const audio = document.getElementById("remoteAudio");
 
-        // Start playing the other user's voice.
-        // catch() prevents an error if the browser blocks autoplay.
-        remoteAudio.play().catch(() => {});
+      // If the audio element and remote stream exist,
+      // play the other user's audio.
+      if (audio && event.streams[0]) {
+        // Connect the remote stream to the audio element.
+        audio.srcObject = event.streams[0];
+
+        // Start playing the other user's audio.
+        // catch() prevents an autoplay error.
+        audio.play().catch(() => {});
       }
     };
 
-    // This event runs when WebRTC finds a new ICE candidate.
-    // ICE candidates help WebRTC find a network path between both users.
-    peerConnection.onicecandidate = (event) => {
+    // ICE CANDIDATE
+
+    // WebRTC calls this when it finds a new ICE candidate.
+    peer.onicecandidate = (event) => {
       // If there is no candidate, there is nothing to send.
       if (!event.candidate) return;
 
-      // Send the ICE candidate through Socket.IO.
-      // Socket.IO is only used for signaling.
-      // The actual audio is sent through WebRTC.
-      socket.emit("ice-candidate", {
-        // ID of the user who generated the candidate.
-        senderId: currentUser._id,
+      // Caller sends the ICE candidate
+      // through the callUser event.
+      if (isCaller) {
+        socket.emit("callUser", {
+          callerId: currentUser.id,
+          calleeId: otherUserId,
+          candidate: event.candidate,
+        });
+      }
 
-        // ID of the user who should receive the candidate.
-        receiverId: otherUserId,
-
-        // The network information generated by WebRTC.
-        candidate: event.candidate,
-      });
+      // Receiver sends the ICE candidate
+      // through the acceptCall event.
+      else {
+        socket.emit("acceptCall", {
+          callerId: otherUserId,
+          calleeId: currentUser.id,
+          candidate: event.candidate,
+        });
+      }
     };
 
-    // Return the connection so other functions can use it.
-    return peerConnection;
+    // Return the peer connection.
+    return peer;
   };
 
-  // Adds ICE candidates that arrived before the connection was ready.
-  // This is used after the remote description has been set.
-  const addPendingCandidates = async (peerConnection) => {
-    // Go through every ICE candidate that was saved earlier.
-    for (const candidate of pendingCandidatesRef.current) {
-      // Add the saved candidate to the WebRTC connection.
-      // RTCIceCandidate converts the received data into a WebRTC candidate.
-      await peerConnection.addIceCandidate(new RTCIceCandidate(candidate));
-    }
+  // CREATE OFFER
 
-    // Clear the old candidates because they have already been added.
-    pendingCandidatesRef.current = [];
-  };
-
-  // This function is used by the caller.
-  // The caller creates an offer to start the WebRTC connection.
   const createOffer = async () => {
     try {
-      // Get the existing WebRTC connection
-      // or create a new one if it does not exist.
-      const peerConnection = await createPeerConnection();
+      // Create or get the existing peer connection.
+      const peer = await createPeer();
 
-      // Create an offer containing the caller's WebRTC information.
-      const offer = await peerConnection.createOffer();
+      // Create an offer containing
+      // our WebRTC connection information.
+      const offer = await peer.createOffer();
 
       // Save the offer as our local description.
-      // WebRTC needs this before sending the offer to the receiver.
-      await peerConnection.setLocalDescription(offer);
+      //saves device media and network settings to start a connection with another peer
+      await peer.setLocalDescription(offer);
 
-      // Send the offer to the receiver using Socket.IO.
-      socket.emit("offer", {
-        // ID of the caller.
-        senderId: currentUser._id,
+      // Send the offer to the other user
+      // through the callUser Socket.IO event.
+      socket.emit("callUser", {
+        callerId: currentUser.id,
 
-        // ID of the person receiving the call.
-        receiverId: otherUserId,
+        calleeId: otherUserId,
 
-        // WebRTC offer information.
         offer,
       });
     } catch (error) {
-      // Shows an error if creating or sending the offer fails.
-      console.error("Create offer error:", error);
+      console.error("Offer error:", error);
     }
   };
 
-  // This function is used by the receiver.
-  // It receives the caller's offer and creates an answer.
+  // HANDLE OFFER
+
   const handleOffer = async (data) => {
     try {
-      // Create the WebRTC connection if it does not already exist.
-      const peerConnection = await createPeerConnection();
+      // Create or get the existing peer connection.
+      const peer = await createPeer();
 
-      // Save the caller's offer as the remote description.
-      // This tells WebRTC what connection information the caller has.
-      await peerConnection.setRemoteDescription(
-        new RTCSessionDescription(data.offer),
-      );
+      // Save the caller's offer
+      // as the remote description.
+      //setRemoteDescription tells your browser the media settings of the other person's device.
+      // RTCSessionDescription holds the media settings
+      await peer.setRemoteDescription(new RTCSessionDescription(data.offer));
 
-      // Add ICE candidates that arrived before the offer.
-      await addPendingCandidates(peerConnection);
+      // Add ICE candidates that arrived
+      // before the remote description was ready.
+      for (const candidate of candidatesRef.current) {
+        await peer.addIceCandidate(new RTCIceCandidate(candidate));
+      }
+
+      // Clear the candidates because
+      // they have now been added.
+      candidatesRef.current = [];
 
       // Create an answer for the caller's offer.
-      const answer = await peerConnection.createAnswer();
+      const answer = await peer.createAnswer();
 
       // Save the answer as our local description.
-      // WebRTC needs this before sending the answer.
-      await peerConnection.setLocalDescription(answer);
+      await peer.setLocalDescription(answer);
 
-      // Send the answer back to the caller through Socket.IO.
-      socket.emit("answer", {
-        // ID of the receiver.
-        senderId: currentUser._id,
+      // Send the answer back to the caller
+      // through the acceptCall event.
+      socket.emit("acceptCall", {
+        callerId: data.callerId,
 
-        // Send the answer back to the caller.
-        receiverId: data.senderId,
+        calleeId: data.calleeId,
 
-        // WebRTC answer information.
         answer,
       });
     } catch (error) {
-      // Shows an error if the receiver cannot process the offer.
-      console.error("Handle offer error:", error);
+      console.error("Offer error:", error);
     }
   };
 
-  // This function is used by the caller.
-  // It receives the answer created by the receiver.
+  // HANDLE ANSWER
+
   const handleAnswer = async (data) => {
     try {
-      // Get the WebRTC connection that the caller already created.
-      const peerConnection = peerConnectionRef.current;
+      // Get the existing peer connection.
+      const peer = peerRef.current;
 
-      // If the connection does not exist,
-      // there is nothing to do with the answer.
-      if (!peerConnection) return;
+      // If the peer does not exist,
+      // there is nothing to do.
+      if (!peer) return;
 
-      // Save the receiver's answer as the remote description.
-      // This completes the main offer/answer process.
-      await peerConnection.setRemoteDescription(
-        new RTCSessionDescription(data.answer),
-      );
+      // Save the receiver's answer
+      // as the remote description.
+      await peer.setRemoteDescription(new RTCSessionDescription(data.answer));
 
-      // Add any ICE candidates that arrived before the answer.
-      await addPendingCandidates(peerConnection);
+      // Add ICE candidates that arrived
+      // before the connection was ready.
+      for (const candidate of candidatesRef.current) {
+        //RTCIceCandidate contains the network path details used to reach a device
+        await peer.addIceCandidate(new RTCIceCandidate(candidate));
+      }
+
+      // Clear the candidates because
+      // they have now been added.
+      candidatesRef.current = [];
     } catch (error) {
-      // Shows an error if the answer cannot be processed.
-      console.error("Handle answer error:", error);
+      console.error("Answer error:", error);
     }
   };
 
-  // This function handles ICE candidates received from the other user.
-  // Both caller and receiver use this function.
-  const handleIceCandidate = async (data) => {
+  // HANDLE ICE (Interactive Connectivity Establishment)
+
+  const handleCandidate = async (candidate) => {
     try {
-      // Get our current WebRTC connection.
-      const peerConnection = peerConnectionRef.current;
+      // Get the existing peer connection.
+      const peer = peerRef.current;
 
-      // Sometimes an ICE candidate arrives before the remote description.
-      // WebRTC cannot add it yet, so we save it for later.
-      if (!peerConnection || !peerConnection.remoteDescription) {
-        // Store the candidate until the connection is ready.
-        pendingCandidatesRef.current.push(data.candidate);
+      // If the peer or remote description is not ready,
+      // save the candidate and add it later.
+      if (!peer || !peer.remoteDescription) {
+        candidatesRef.current.push(candidate);
 
-        // Stop here because we cannot add the candidate yet.
         return;
       }
 
-      // Add the received ICE candidate to our WebRTC connection.
-      await peerConnection.addIceCandidate(new RTCIceCandidate(data.candidate));
+      // Add the received ICE candidate
+      // to the WebRTC connection.
+      await peer.addIceCandidate(new RTCIceCandidate(candidate));
     } catch (error) {
-      // Shows an error if the ICE candidate cannot be added.
-      console.error("ICE candidate error:", error);
+      console.error("ICE error:", error);
     }
   };
 
-  // This effect starts the WebRTC connection on the caller's side.
-  // It runs when the call has been accepted.
-  useEffect(() => {
-    // We need all four values before creating the offer.
-    if (currentUser?._id && otherUserId && isCaller && callAccepted) {
-      // Start the WebRTC offer process.
-      createOffer();
+  // HANDLE CALL DATA
+
+  const handleCallData = async (data) => {
+    // If an offer was received, handle it.
+    if (data.offer) {
+      await handleOffer(data);
+
+      return;
     }
 
-    // Run this effect when any of these values change.
-    // callAccepted is especially important because WebRTC starts after acceptance.
-  }, [currentUser?._id, otherUserId, isCaller, callAccepted]);
+    // If an answer was received, handle it.
+    if (data.answer) {
+      await handleAnswer(data);
 
-  // This effect creates the Socket.IO listeners.
-  // These listeners receive WebRTC signaling messages.
+      return;
+    }
+
+    // If an ICE candidate was received, handle it.
+    if (data.candidate) {
+      await handleCandidate(data.candidate);
+
+      return;
+    }
+  };
+
+  // START WebRTC
+
   useEffect(() => {
-    // Do not create listeners until we know the current user's ID.
-    if (!currentUser?._id) return;
+    // Start WebRTC only when:
+    // 1. Current user exists
+    // 2. Other user exists
+    // 3. Current user is the caller
+    // 4. Call has been accepted
+    if (currentUser?.id && otherUserId && isCaller && callAccepted) {
+      // Create the WebRTC offer.
+      createOffer();
+    }
+  }, [currentUser?.id, otherUserId, isCaller, callAccepted]);
 
-    // Receiver listens for the caller's offer.
-    socket.on("offer", handleOffer);
+  // CLEANUP
 
-    // Caller listens for the receiver's answer.
-    socket.on("answer", handleAnswer);
-
-    // Both users listen for ICE candidates.
-    socket.on("ice-candidate", handleIceCandidate);
-
-    // Remove the listeners when this hook is removed or recreated.
-    // This prevents duplicate Socket.IO listeners.
-    return () => {
-      // Remove the offer listener.
-      socket.off("offer", handleOffer);
-
-      // Remove the answer listener.
-      socket.off("answer", handleAnswer);
-
-      // Remove the ICE candidate listener.
-      socket.off("ice-candidate", handleIceCandidate);
-    };
-
-    // Recreate the listeners when the current user or other user changes.
-  }, [currentUser?._id, otherUserId]);
-
-  // Ends the current WebRTC call.
-  // This function should be called when either user ends the call.
   const endWebRTC = () => {
-    // Close the WebRTC connection if it exists.
-    peerConnectionRef.current?.close();
+    // Close the WebRTC peer connection.
+    peerRef.current?.close();
 
-    // Remove the old connection.
-    // This allows a new connection to be created for the next call.
-    peerConnectionRef.current = null;
+    // Remove the old peer connection.
+    // A new one can be created for the next call.
+    peerRef.current = null;
 
-    // Get all microphone tracks and stop them.
-    // This turns off microphone access after the call ends.
+    // Stop all microphone tracks.
+    // This turns off the microphone.
     localStreamRef.current?.getTracks().forEach((track) => {
       track.stop();
     });
 
     // Remove the old microphone stream.
-    // The next call will create a new stream.
     localStreamRef.current = null;
 
-    // Remove any ICE candidates left from the previous call.
-    // This prevents old candidates from being used in a new call.
-    pendingCandidatesRef.current = [];
+    // Remove old ICE candidates.
+    // This prevents them from being used
+    // in the next call.
+    candidatesRef.current = [];
   };
 
-  // Return the functions that other components need.
-  // For example, the call component can use endWebRTC() when the call ends.
+  // RETURN
+
   return {
-    createPeerConnection,
+    createPeer,
     getLocalStream,
+    handleCallData,
     endWebRTC,
   };
 };
 
-// Export the hook so it can be imported into the call components.
 export default useWebRTC;

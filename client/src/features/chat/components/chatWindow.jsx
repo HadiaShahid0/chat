@@ -26,19 +26,19 @@ const ChatWindow = ({ currentUser, selectedUser, messages = [] }) => {
     }
 
     // Stop if the current user ID is not available
-    if (!currentUser?._id) {
+    if (!currentUser?.id) {
       return;
     }
 
     // Stop if the selected user's ID is not available
-    if (!selectedUser?._id) {
+    if (!selectedUser?.id) {
       return;
     }
 
     // Send the message to the server through Socket.IO
     socket.emit("sendMessage", {
-      senderId: currentUser._id,
-      receiverId: selectedUser._id,
+      senderId: currentUser.id,
+      receiverId: selectedUser.id,
       text: text.trim(),
     });
 
@@ -81,7 +81,7 @@ const ChatWindow = ({ currentUser, selectedUser, messages = [] }) => {
         ) : (
           messages.map((message) => (
             <ChatBubble
-              key={message._id}
+              key={message.id}
               message={message}
               currentUser={currentUser}
             />

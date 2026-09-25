@@ -7,14 +7,31 @@ import cors from "cors";
 import cookieParser from "cookie-parser";
 import path from "path";
 
-import connectDB from "./config/db.js";
 import routes from "./routes/index.js";
 import socketHelper from "./utils/socketHelper.js";
+
+import "./models/index.js";
+import sequelize from "./config/db.js";
+
+import { swaggerUiServe, swaggerUiSetup } from "./utils/swagger.js";
 
 const app = express();
 
 // Connect MongoDB
-connectDB();
+
+// Connect to MySQL
+try {
+  await sequelize.authenticate();
+
+  console.log("MySQL connected successfully.");
+
+  // Create/update tables
+  await sequelize.sync();
+
+  console.log("Database synchronized.");
+} catch (error) {
+  console.error("Database connection failed:", error);
+}
 
 // Create HTTP server
 const server = http.createServer(app);
@@ -36,7 +53,7 @@ app.use(
     credentials: true,
   }),
 );
-
+app.use("/api-docs", swaggerUiServe, swaggerUiSetup);
 // Static uploads
 app.use("/uploads", express.static(path.join(process.cwd(), "src/uploads")));
 

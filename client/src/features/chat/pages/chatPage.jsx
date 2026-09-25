@@ -12,7 +12,6 @@ import useChatSocket from "../hooks/useChatSocket";
 
 import { BsFillTelephoneFill } from "react-icons/bs";
 
-import AudioCall from "../../call/components/audioCall";
 const ChatPage = () => {
   // Get the userId from the URL
   const { userId } = useParams();
@@ -52,7 +51,7 @@ const ChatPage = () => {
 
       // Find the user whose ID matches the userId from the URL
       const user = data.users.find(
-        (item) => String(item._id) === String(userId),
+        (item) => String(item.id) === String(userId),
       );
 
       // Set the selected user for the current chat
@@ -64,25 +63,22 @@ const ChatPage = () => {
 
   // Get messages when the current user or selected chat changes
   useEffect(() => {
-    // Stop if the current user ID or URL user ID is not available
-    if (!currentUser?._id || !userId) {
+    if (!currentUser?.id || !userId) {
       return;
     }
 
-    // Call loadMessages to get the chat messages
-    // eslint-disable-next-line react-hooks/immutability
-    loadMessages();
-
-    // Tell the server that the current user opened this chat
+    // First tell server that this chat is open
     socket.emit("openChat", {
-      userId: currentUser._id,
+      userId: currentUser.id,
       otherUserId: userId,
     });
 
+    // Then load messages and mark them as seen
+    loadMessages();
+
     return () => {
-      // Tell the server that the current user closed this chat
       socket.emit("closeChat", {
-        userId: currentUser._id,
+        userId: currentUser.id,
         otherUserId: userId,
       });
     };
@@ -100,7 +96,7 @@ const ChatPage = () => {
 
         // Mark messages from the selected user as seen
         socket.emit("markSeen", {
-          receiverId: currentUser._id,
+          receiverId: currentUser.id,
           senderId: userId,
         });
       }
@@ -112,11 +108,11 @@ const ChatPage = () => {
   // SOCKET
   useChatSocket(currentUser, selectedUser, setMessages);
   const handleCall = () => {
-    if (!selectedUser?._id) {
+    if (!selectedUser) {
       return;
     }
 
-    startCall(selectedUser._id);
+    startCall(selectedUser);
   };
 
   if (!selectedUser) {

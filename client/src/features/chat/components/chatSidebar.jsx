@@ -15,9 +15,9 @@ const ChatSidebar = ({ users, selectedUser, onSelectUser }) => {
         ) : (
           users.map((user) => (
             <UserItem
-              key={user._id}
+              key={user.id}
               user={user}
-              selected={selectedUser?._id === user._id}
+              selected={selectedUser?.id === user.id}
               onClick={() => onSelectUser(user)}
             />
           ))

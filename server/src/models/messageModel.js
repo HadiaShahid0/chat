@@ -1,45 +1,108 @@
-import mongoose from "mongoose";
-
-const messageSchema = new mongoose.Schema(
+import { DataTypes } from "sequelize";
+import sequelize from "../config/db.js";
+const Message = sequelize.define(
+  "Message",
   {
-    sender: {
-      type: mongoose.Schema.Types.ObjectId,
-      ref: "User",
-      required: true,
+    // Primary key
+    id: {
+      type: DataTypes.INTEGER,
+      autoIncrement: true,
+      primaryKey: true,
     },
 
-    receiver: {
-      type: mongoose.Schema.Types.ObjectId,
-      ref: "User",
-      required: true,
+    // User who sent the message
+    senderId: {
+      type: DataTypes.INTEGER,
+      allowNull: false,
     },
 
+    // User who receives the message
+    receiverId: {
+      type: DataTypes.INTEGER,
+      allowNull: false,
+    },
+
+    // Text message
     text: {
-      type: String,
-      trim: true,
-      default: "",
+      type: DataTypes.TEXT,
+      allowNull: false,
+      defaultValue: "",
     },
 
+    // Image path
     image: {
-      type: String,
-      default: "",
+      type: DataTypes.STRING,
+      allowNull: false,
+      defaultValue: "",
     },
 
+    // Message status
     status: {
-      type: String,
-      enum: ["sent", "delivered", "seen"],
-      default: "sent",
+      type: DataTypes.ENUM("sent", "delivered", "seen"),
+      allowNull: false,
+      defaultValue: "sent",
     },
   },
   {
+    // MySQL table name
+    tableName: "messages",
+
+    // Automatically creates createdAt and updatedAt
     timestamps: true,
+
+    // // Composite index
+    indexes: [
+      {
+        name: "sender_receiver_id",
+        fields: ["senderId", "receiverId"],
+      },
+    ],
   },
 );
 
-messageSchema.index({
-  sender: 1,
-  receiver: 1,
-  createdAt: 1,
-});
+export default Message;
+// import mongoose from "mongoose";
 
-export default mongoose.model("Message", messageSchema);
+// const messageSchema = new mongoose.Schema(
+//   {
+//     sender: {
+//       type: mongoose.Schema.Types.ObjectId,
+//       ref: "User",
+//       required: true,
+//     },
+
+//     receiver: {
+//       type: mongoose.Schema.Types.ObjectId,
+//       ref: "User",
+//       required: true,
+//     },
+
+//     text: {
+//       type: String,
+//       trim: true,
+//       default: "",
+//     },
+
+//     image: {
+//       type: String,
+//       default: "",
+//     },
+
+//     status: {
+//       type: String,
+//       enum: ["sent", "delivered", "seen"],
+//       default: "sent",
+//     },
+//   },
+//   {
+//     timestamps: true,
+//   },
+// );
+
+// messageSchema.index({
+//   sender: 1,
+//   receiver: 1,
+//   createdAt: 1,
+// });
+
+// export default mongoose.model("Message", messageSchema);

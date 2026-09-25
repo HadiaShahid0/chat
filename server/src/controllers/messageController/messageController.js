@@ -9,7 +9,7 @@ export const getMessages = async (req, res) => {
     const { userId } = req.params;
 
     const messages = await getMessagesService(
-      req.user._id,
+      req.user.id,
       userId,
     );
 

@@ -32,10 +32,10 @@ const socketHelper = (server) => {
         //Need await here because after updating the db we used it for changing the status
         const pendingMessages = await markMessagesDeliveredService(userId);
 
-        // Tell senders that their messages are delivered
+        // Tell senderIds that their messages are delivered
         for (const message of pendingMessages) {
-          io.to(`user:${message.sender}`).emit("messageStatusUpdate", {
-            messageId: message._id,
+          io.to(`user:${message.senderId}`).emit("messageStatusUpdate", {
+            messageId: message.id,
             status: "delivered",
           });
         }
@@ -74,7 +74,7 @@ const socketHelper = (server) => {
         //call the service where the message creates
         const message = await createMessageService(senderId, receiverId, text);
 
-        // Show message to sender
+        // Show message to senderId
         socket.emit("messageSent", message);
 
         const receiverRoom = `user:${receiverId}`;
@@ -88,7 +88,7 @@ const socketHelper = (server) => {
         }
 
         // Check if receiver has this chat open, create a variable chatRoom
-        // where we put the receiverId & senderId to check whether the chat is opened or not
+        // where we put the receiverId & senderIdId to check whether the chat is opened or not
         const chatRoom = `chat:${receiverId}:${senderId}`;
 
         //Check whether the current chat is opened on receiver side or not
@@ -107,9 +107,9 @@ const socketHelper = (server) => {
         // Send message to receiver
         io.to(receiverRoom).emit("receiveMessage", message);
 
-        // Update sender status
+        // Update senderId status
         socket.emit("messageStatusUpdate", {
-          messageId: message._id,
+          messageId: message.id,
           status: message.status,
           receiverId,
         });
@@ -121,164 +121,66 @@ const socketHelper = (server) => {
     // MARK MESSAGES AS SEEN
     socket.on("markSeen", async ({ receiverId, senderId }) => {
       try {
-        // Don't use await here because we only call the service to save the data to the database.
-        markMessagesSeenService(receiverId, senderId);
-
-        //update the message status
-        io.to(`user:${senderId}`).emit("messageStatusUpdate", {
-          senderId,
+        const seenMessages = await markMessagesSeenService(
           receiverId,
-          status: "seen",
-        });
+          senderId,
+        );
+
+        for (const message of seenMessages) {
+          io.to(`user:${senderId}`).emit("messageStatusUpdate", {
+            messageId: message.id,
+            status: "seen",
+          });
+        }
       } catch (error) {
         console.log("Mark seen error:", error.message);
       }
     });
 
-    // Caller = User A
-    // The user who starts the audio call.
-
-    // Callee = User B
-    // The user who receives the audio call.
-
-    // Caller starts the call.
-    // This event runs when User A sends "callUser" from the frontend.
-    socket.on("callUser", ({ callerId, calleeId }) => {
-      console.log("CALL USER");
-      console.log("callerId:", callerId);
-      console.log("calleeId:", calleeId);
-
-      // Send the incoming call notification to User B.
-      // "user:calleeId" is the room where User B's socket is connected.
-      io.to(`user:${calleeId}`).emit("incomingCall", {
-        // Send the caller's ID to User B.
-        // User B needs this ID when accepting, rejecting, or ending the call.
-        callerId,
-        calleeId,
-      });
+    socket.on("callUser", (data) => {
+      console.log("CALL USER:", data);
+      // Send everything to the receiver.
+      // This can contain:
+      // callerId + calleeId
+      // OR
+      // callerId + calleeId + offer
+      // OR
+      // callerId + calleeId + candidate
+      io.to(`user:${data.calleeId}`).emit("incomingCall", data);
     });
 
-    // Receiver accepts the call.
-    // This event runs when User B clicks the Accept button.
-    socket.on("acceptCall", ({ callerId, calleeId }) => {
-      console.log("CALL ACCEPTED");
-      console.log("callerId:", callerId);
-      console.log("calleeId:", calleeId);
+    // ACCEPT CALL
 
-      // Send the "callAccepted" event to User A.
-      // User A needs to know that User B accepted the call.
-      io.to(`user:${callerId}`).emit("callAccepted", {
-        // Send the caller ID to User A.
-        callerId,
+    socket.on("acceptCall", (data) => {
+      console.log("ACCEPT CALL:", data);
 
-        // Send the callee ID to User A.
-        // This is needed later for WebRTC signaling.
-        calleeId,
-      });
+      // Send everything back to the caller.
+      // This can contain:
+      // callerId + calleeId
+      // OR
+      // callerId + calleeId + answer
+      // OR
+      // callerId + calleeId + candidate
+      io.to(`user:${data.callerId}`).emit("callAccepted", data);
     });
 
-    // Receiver rejects the call.
-    // This event runs when User B clicks the Reject button.
-    socket.on("rejectCall", ({ callerId, calleeId }) => {
-      console.log("CALL REJECTED");
-      console.log("callerId:", callerId);
-      console.log("calleeId:", calleeId);
+    // REJECT CALL
 
-      // Send the "callRejected" event to User A.
-      // User A can then close the calling UI.
-      io.to(`user:${callerId}`).emit("callRejected", {
-        // Send the callee ID to User A.
-        calleeId,
+    socket.on("rejectCall", (data) => {
+      console.log("REJECT CALL:", data);
 
-        // Send the caller ID to User A.
-        callerId,
-      });
+      io.to(`user:${data.callerId}`).emit("callRejected", data);
     });
 
-    // End the call.
-    // This event runs when either User A or User B clicks the End Call button.
-    socket.on("endCall", ({ callerId, calleeId }) => {
-      console.log("CALL ENDED");
-      console.log("callerId:", callerId);
-      console.log("calleeId:", calleeId);
+    // END CALL
 
-      // Send "callEnd" to the caller.
-      // The caller needs to close their call UI and WebRTC connection.
-      io.to(`user:${callerId}`).emit("callEnd", {
-        // Send the caller ID with the event.
-        callerId,
+    socket.on("endCall", (data) => {
+      console.log("END CALL:", data);
 
-        // Send the callee ID with the event.
-        calleeId,
-      });
+      // Send the end event to both users.
+      io.to(`user:${data.callerId}`).emit("callEnd", data);
 
-      // Send "callEnd" to the callee.
-      // The callee also needs to close their call UI and WebRTC connection.
-      io.to(`user:${calleeId}`).emit("callEnd", {
-        // Send the caller ID with the event.
-        callerId,
-
-        // Send the callee ID with the event.
-        calleeId,
-      });
-    });
-
-    // Applying the Audio Call Socket.
-    // The following events are used for WebRTC signaling.
-    // Socket.IO does not carry the actual audio.
-    // It only helps both users exchange WebRTC information.
-
-    // SEND OFFER
-    // The caller creates an offer and sends it to the callee.
-    socket.on("offer", ({ senderId, receiverId, offer }) => {
-      console.log("WEBRTC OFFER");
-      console.log("senderId:", senderId);
-      console.log("receiverId:", receiverId);
-
-      // Send the offer to the receiver's user room.
-      // The server does not create or modify the offer.
-      // It only forwards it to the correct user.
-      io.to(`user:${receiverId}`).emit("offer", {
-        // Tell the receiver who created the offer.
-        senderId,
-
-        // Send the WebRTC offer to the receiver.
-        offer,
-      });
-    });
-
-    // SEND ANSWER
-    // The callee creates an answer after receiving the offer.
-    socket.on("answer", ({ senderId, receiverId, answer }) => {
-      console.log("WEBRTC ANSWER");
-      console.log("senderId:", senderId);
-      console.log("receiverId:", receiverId);
-
-      // Send the answer to the receiver's user room.
-      // The server only forwards the answer.
-      io.to(`user:${receiverId}`).emit("answer", {
-        // Tell the receiver who created the answer.
-        senderId,
-
-        // Send the WebRTC answer to the receiver.
-        answer,
-      });
-    });
-
-    // SEND ICE CANDIDATE
-    // Both users can send ICE candidates during the WebRTC connection.
-    socket.on("ice-candidate", ({ senderId, receiverId, candidate }) => {
-      console.log("WEBRTC ICE CANDIDATE");
-
-      // Send the ICE candidate to the other user's room.
-      // The server only forwards the candidate.
-      io.to(`user:${receiverId}`).emit("ice-candidate", {
-        // Tell the receiver who sent the candidate.
-        senderId,
-
-        // Send the ICE candidate to the other user.
-        candidate,
-      });
+      io.to(`user:${data.calleeId}`).emit("callEnd", data);
     });
   });
 

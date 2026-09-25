@@ -1,7 +1,6 @@
 const ChatBubble = ({ message, currentUser }) => {
   // Check if this message was sent by the current user
-  const isMine = String(message.sender) === String(currentUser._id);
-
+  const isMine = String(message.senderId) === String(currentUser.id);
   return (
     <div
       className={`d-flex mb-3 ${

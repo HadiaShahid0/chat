@@ -10,11 +10,7 @@ export const register = async (req, res) => {
   try {
     const { name, email, password } = req.body;
 
-    const { user, token } = await registerService(
-      name,
-      email,
-      password
-    );
+    const { user, token } = await registerService(name, email, password);
 
     res.cookie("token", token, {
       httpOnly: true,
@@ -41,10 +37,7 @@ export const login = async (req, res) => {
   try {
     const { email, password } = req.body;
 
-    const { user, token } = await loginService(
-      email,
-      password
-    );
+    const { user, token } = await loginService(email, password);
 
     res.cookie("token", token, {
       httpOnly: true,
@@ -69,7 +62,7 @@ export const login = async (req, res) => {
 // Verify User
 export const verify = async (req, res) => {
   try {
-    const user = await verifyService(req.user._id);
+    const user = await verifyService(req.user.id);
 
     res.status(200).json({
       success: true,
@@ -101,3 +94,14 @@ export const logout = async (req, res) => {
     });
   }
 };
+
+
+// export const verifyOtp = async (req, res) => {
+//   try {
+//     const { email, otp } = req.body;
+//     const result = await verifyOtpService(email, otp);
+//     res.status(200).json(result);
+//   } catch (err) {
+//     res.status(400)({ message: err.message });
+//   }
+// };

@@ -8,7 +8,7 @@ import {
 // GET CURRENT USER
 export const getCurrentUser = async (req, res) => {
   try {
-    const user = await getCurrentUserService(req.user._id);
+    const user = await getCurrentUserService(req.user.id);
 
     res.json({
       success: true,
@@ -27,14 +27,14 @@ export const updateProfile = async (req, res) => {
   try {
     const { name } = req.body;
 
-    const user = await updateProfileService(req.user._id, name);
+    const user = await updateProfileService(req.user.id, name);
 
     const io = req.app.get("io");
 
     // Tell all connected users that this profile was updated
     io.emit("profileUpdated", {
       user: {
-        _id: user._id,
+        id: user.id,
         name: user.name,
         profileImage: user.profileImage,
       },
@@ -62,14 +62,14 @@ export const uploadProfileImage = async (req, res) => {
 
     const imagePath = `uploads/profileAvatars/${req.file.filename}`;
 
-    const user = await uploadProfileImageService(req.user._id, imagePath);
+    const user = await uploadProfileImageService(req.user.id, imagePath);
 
     const io = req.app.get("io");
 
     // Tell all connected users that profile image changed
     io.emit("profileUpdated", {
       user: {
-        _id: user._id,
+        id: user.id,
         name: user.name,
         profileImage: user.profileImage,
       },
@@ -93,7 +93,7 @@ export const getAllUsers = async (req, res) => {
   try {
     const search = req.query.search || "";
 
-    const users = await getAllUsersService(req.user._id, search);
+    const users = await getAllUsersService(req.user.id, search);
 
     res.status(200).json({
       success: true,

@@ -36,11 +36,11 @@ const ChatUsers = () => {
       ) : (
         <div className="row">
           {users.map((user) => (
-            <div key={user._id} className="col-md-6 col-lg-4 mb-3">
+            <div key={user.id} className="col-md-6 col-lg-4 mb-3">
               <div
                 className="card shadow-sm"
                 style={{ cursor: "pointer" }}
-                onClick={() => navigate(`/chat/${user._id}`)}
+                onClick={() => navigate(`/chat/${user.id}`)}
               >
                 <div className="card-body d-flex align-items-center">
                   <img
