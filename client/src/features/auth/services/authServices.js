@@ -70,3 +70,105 @@ export const logout = async () => {
 
   return data;
 };
+export const verifyOtp = async (email, otp) => {
+  const response = await fetch(`${BASE_URL}/auth/verify-otp`, {
+    method: "POST",
+    headers: {
+      "Content-Type": "application/json",
+    },
+    body: JSON.stringify({
+      email,
+      otp,
+    }),
+  });
+
+  const data = await response.json();
+
+  if (!response.ok) {
+    throw new Error(data.message);
+  }
+
+  return data;
+};
+
+export const setupMfa = async () => {
+  const response = await fetch(
+    `${BASE_URL}/auth/mfa/setup`,
+    {
+      method: "POST",
+      credentials: "include",
+    },
+  );
+
+  const data = await response.json();
+
+  if (!response.ok) {
+    throw new Error(data.message);
+  }
+
+  return data;
+};
+export const verifyMfaSetup = async (token) => {
+  const response = await fetch(
+    `${BASE_URL}/auth/mfa/verify`,
+    {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+      },
+      credentials: "include",
+      body: JSON.stringify({ token }),
+    },
+  );
+
+  const data = await response.json();
+
+  if (!response.ok) {
+    throw new Error(data.message);
+  }
+
+  return data;
+};
+
+export const disableMfa = async () => {
+  const response = await fetch(
+    `${BASE_URL}/auth/mfa/disable`,
+    {
+      method: "POST",
+      credentials: "include",
+    },
+  );
+
+  const data = await response.json();
+
+  if (!response.ok) {
+    throw new Error(data.message);
+  }
+
+  return data;
+};
+
+export const verifyMfaLogin = async (mfaToken, token) => {
+  const response = await fetch(
+    `${BASE_URL}/auth/verify-mfa`,
+    {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+      },
+      credentials: "include",
+      body: JSON.stringify({
+        mfaToken,
+        token,
+      }),
+    },
+  );
+
+  const data = await response.json();
+
+  if (!response.ok) {
+    throw new Error(data.message);
+  }
+
+  return data;
+};

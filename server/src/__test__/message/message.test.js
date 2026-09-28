@@ -8,6 +8,7 @@ import {
 } from "../../services/messageServices";
 
 import Message from "../../models/messageModel";
+import { Op, where } from "sequelize";
 
 vi.mock("../../models/messageModel.js", () => ({
   default: {
@@ -116,19 +117,23 @@ describe("Message Services", () => {
   });
 
   it("marks messages as seen", async () => {
-    const messages = {
-      id: 1,
-      senderId: 1,
-      receiverId: 2,
-      text: "Hello",
-      status: "delivered",
-    };
+    const messages = [
+      {
+        id: 1,
+        senderId: 1,
+        receiverId: 2,
+        text: "Hello",
+        status: "delivered",
+      },
+    ];
 
     Message.findAll.mockResolvedValue(messages);
     Message.update.mockResolvedValue([1]);
 
     const markSeen = await markMessagesSeenService(2, 1);
+    
     expect(Message.findAll).toHaveBeenCalled();
+
     expect(Message.update).toHaveBeenCalledWith(
       {
         status: "seen",
@@ -142,7 +147,6 @@ describe("Message Services", () => {
       },
     );
 
-    expect(markSeen).toEqual(messages)
+    expect(markSeen).toEqual(messages);
   });
 });
-0

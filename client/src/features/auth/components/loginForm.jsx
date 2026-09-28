@@ -24,34 +24,46 @@ const LoginForm = () => {
     });
   };
 
-  const handleSubmit = async (e) => {
-    e.preventDefault();
+ const handleSubmit = async (e) => {
+  e.preventDefault();
 
-    if (!formData.email.trim()) {
-      return alert("Email is required.");
+  if (!formData.email.trim()) {
+    return alert("Email is required.");
+  }
+
+  if (!formData.password.trim()) {
+    return alert("Password is required.");
+  }
+
+  try {
+    setLoading(true);
+
+    const response = await login(formData);
+
+    // MFA is required
+    if (response.requiresMfa) {
+      navigate("/mfa-login", {
+        state: {
+          mfaToken: response.mfaToken,
+        },
+      });
+
+      return;
     }
 
-    if (!formData.password.trim()) {
-      return alert("Password is required.");
-    }
+    // Normal login is complete
+    socket.connect();
 
-    try {
-      setLoading(true);
+    // Join personal room
+    socket.emit("join", response.user.id);
 
-      const response = await login(formData);
-
-      // Connect socket
-      socket.connect();
-
-      // Join personal room
-      socket.emit("join", response.user.id);
-      navigate("/chat/users");
-    } catch (error) {
-      alert(error.message);
-    } finally {
-      setLoading(false);
-    }
-  };
+    navigate("/chat/users");
+  } catch (error) {
+    alert(error.message);
+  } finally {
+    setLoading(false);
+  }
+};
 
   return (
     <div
@@ -59,20 +71,13 @@ const LoginForm = () => {
       style={{ width: "550px" }}
     >
       <div className="card-body p-5">
-
-        <h2 className="fw-bold text-center mb-2">
-          Login
-        </h2>
+        <h2 className="fw-bold text-center mb-2">Login</h2>
 
         <form onSubmit={handleSubmit}>
-
           <div className="mb-3">
-            <label className="form-label">
-              Email
-            </label>
+            <label className="form-label">Email</label>
 
             <div className="input-group">
-
               <span className="input-group-text">
                 <FiMail />
               </span>
@@ -85,18 +90,13 @@ const LoginForm = () => {
                 value={formData.email}
                 onChange={handleChange}
               />
-
             </div>
           </div>
 
           <div className="mb-4">
-
-            <label className="form-label">
-              Password
-            </label>
+            <label className="form-label">Password</label>
 
             <div className="input-group">
-
               <span className="input-group-text">
                 <FiLock />
               </span>
@@ -117,32 +117,23 @@ const LoginForm = () => {
               >
                 {showPassword ? <FiEyeOff /> : <FiEye />}
               </button>
-
             </div>
-
           </div>
 
-          <button
-            className="btn btn-secondary w-100"
-            disabled={loading}
-          >
+          <button className="btn btn-secondary w-100" disabled={loading}>
             {loading ? "Logging in..." : "Login"}
           </button>
-
         </form>
 
         <p className="text-center mt-4 mb-0">
           Don't have an account?
-
           <Link
             to="/register"
             className="ms-2 text-decoration-none fw-semibold"
           >
             Register
           </Link>
-
         </p>
-
       </div>
     </div>
   );

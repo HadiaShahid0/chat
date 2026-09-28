@@ -4,9 +4,8 @@ import { Op } from "sequelize";
 // Get the currently logged-in user
 export const getCurrentUserService = async (userId) => {
   const user = await User.findByPk(userId, {
-    // Don't return the password
     attributes: {
-      exclude: ["password"],
+      exclude: ["password", "mfaSecret"],
     },
   });
 
@@ -16,7 +15,6 @@ export const getCurrentUserService = async (userId) => {
 
   return user;
 };
-
 // Update user's name
 export const updateProfileService = async (userId, name) => {
   const user = await User.findByPk(userId);

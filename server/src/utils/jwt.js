@@ -15,3 +15,17 @@ export const generateToken = (userId) => {
 export const verifyToken = (token) => {
   return jwt.verify(token, process.env.JWT_SECRET_KEY);
 };
+
+
+export const generateMfaToken = (userId) => {
+  return jwt.sign(
+    {
+      userId,
+      type: "mfa",
+    },
+    process.env.JWT_SECRET_KEY,
+    {
+      expiresIn: "5m",
+    },
+  );
+};

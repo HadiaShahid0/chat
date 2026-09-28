@@ -23,33 +23,37 @@ const RegisterForm = () => {
     });
   };
 
-  const handleSubmit = async (e) => {
-    e.preventDefault();
+const handleSubmit = async (e) => {
+  e.preventDefault();
 
-    if (!formData.name.trim()) {
-      return alert("Name is required.");
-    }
+  if (!formData.name.trim()) {
+    return alert("Name is required.");
+  }
 
-    if (!formData.email.trim()) {
-      return alert("Email is required.");
-    }
+  if (!formData.email.trim()) {
+    return alert("Email is required.");
+  }
 
-    if (!formData.password.trim()) {
-      return alert("Password is required.");
-    }
+  if (!formData.password.trim()) {
+    return alert("Password is required.");
+  }
 
-    try {
-      setLoading(true);
+  try {
+    setLoading(true);
 
-      await register(formData);
+    await register(formData);
 
-      navigate("/login");
-    } catch (error) {
-      alert(error.message);
-    } finally {
-      setLoading(false);
-    }
-  };
+    navigate("/verify-otp", {
+      state: {
+        email: formData.email,
+      },
+    });
+  } catch (error) {
+    alert(error.message);
+  } finally {
+    setLoading(false);
+  }
+};
 
   return (
     <div

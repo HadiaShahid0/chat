@@ -1,5 +1,6 @@
 import { DataTypes } from "sequelize";
 import sequelize from "../config/db.js";
+
 const User = sequelize.define(
   "User",
   {
@@ -36,45 +37,24 @@ const User = sequelize.define(
       defaultValue: "",
     },
 
-    // otpCode: {
-    //   type: DataTypes.STRING,
-    //   allowNull: true,
-    // },
-    // otpExpiredAt: {
-    //   type: DataTypes.DATE,
-    //   allowNull: true,
-    // },
-    // isVerified: {
-    //   type: DataTypes.BOOLEAN,
-    //   defaultValue: false,
-    // },
+    mfaEnabled: {
+      type: DataTypes.BOOLEAN,
+      allowNull: false,
+      defaultValue: false,
+    },
 
-    
-    // User's online/offline status
-    // status: {
-    //   type: DataTypes.ENUM("online", "offline"),
-    //   allowNull: false,
-    //   defaultValue: "offline",
-    // },
-
-    // // Last time the user was active
-    // lastSeen: {
-    //   type: DataTypes.DATE,
-    //   allowNull: true,
-    //   defaultValue: null,
-    // },
+    mfaSecret: {
+      type: DataTypes.STRING,
+      allowNull: true,
+      defaultValue: null,
+    },
   },
-
   {
-    // MySQL table name
     tableName: "users",
-
-    // Automatically creates:
-    // createdAt
-    // updatedAt
     timestamps: true,
   },
 );
+
 export default User;
 // import mongoose from "mongoose";
 

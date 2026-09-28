@@ -5,12 +5,13 @@ import {
   login,
   verify,
   logout,
+  verifyOtp,
+  verifyMfaLogin
 } from "../controllers/authController/authController.js";
-
 import protect from "../middleware/authMiddleware/authMiddleware.js";
 
 const router = express.Router();
-
+router.post("/verify-mfa", verifyMfaLogin);
 /**
  * @swagger
  * /api/auth/register:
@@ -106,5 +107,5 @@ router.get("/verify", protect, verify);
  *         description: Unauthorized
  */
 router.post("/logout", protect, logout);
-
+router.post("/verify-otp", verifyOtp);
 export default router;
