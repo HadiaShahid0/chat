@@ -1,12 +1,14 @@
 # 💬 MERN Real-Time Chat Application
 
-A full-stack real-time chat application built with **React, Node.js, Express, MongoDB, Socket.IO, and WebRTC**. The application provides secure authentication, email OTP verification, Multi-Factor Authentication (MFA), one-to-one real-time messaging, message delivery and seen status, user profile management, real-time audio calling, and interactive API documentation using Swagger/OpenAPI.
+A full-stack real-time chat application built with **React, Node.js, Express, MySQL, Sequelize, Socket.IO, and WebRTC**.
+
+The application provides secure authentication, Google reCAPTCHA protection, email OTP verification, Multi-Factor Authentication (MFA), password recovery, one-to-one real-time messaging, message delivery and seen status, user profile management, real-time audio calling, automated backend testing with Vitest, and interactive API documentation using Swagger/OpenAPI.
 
 ---
 
-## 📌 Features
+# 📌 Features
 
-### 🔐 Authentication
+## 🔐 Authentication
 
 * User registration
 * User login
@@ -17,27 +19,124 @@ A full-stack real-time chat application built with **React, Node.js, Express, Mo
 * Protected API routes
 * Logged-in user verification
 * Secure password verification
+* CAPTCHA protection during registration
 
-### 📧 Email OTP Verification
+---
 
-* Generate a one-time password (OTP)
-* Send OTP through email using Nodemailer
+## 🤖 Google reCAPTCHA
+
+The registration process is protected using **Google reCAPTCHA v2** to help prevent automated bot registrations.
+
+### Features
+
+* Google reCAPTCHA v2 integration
+* CAPTCHA token generation on the frontend
+* CAPTCHA token verification on the backend
+* Google reCAPTCHA API integration
+* Invalid CAPTCHA handling
+* Missing CAPTCHA token validation
+* CAPTCHA verification before registration
+
+### CAPTCHA Flow
+
+```text
+User Registration
+       │
+       ▼
+Complete Registration Form
+       │
+       ▼
+Google reCAPTCHA
+       │
+       ▼
+CAPTCHA Token
+       │
+       ▼
+Backend
+       │
+       ▼
+Google reCAPTCHA Verification
+       │
+    ┌──┴──┐
+    │     │
+ Invalid  Valid
+    │     │
+    ▼     ▼
+ Error   Continue Registration
+```
+
+---
+
+## 📧 Email OTP Verification
+
+The application uses **Nodemailer** to send OTP verification emails.
+
+### Features
+
+* Generate one-time passwords
+* Send OTP through email
 * Verify email using OTP
 * OTP expiration handling
 * Invalid OTP validation
 * Time-limited verification codes
+* Pending registration handling
 
-### 🛡️ Multi-Factor Authentication
+### Registration OTP Flow
 
-The application supports **TOTP-based Multi-Factor Authentication (MFA)** using an authenticator application.
+```text
+User Registration
+       │
+       ▼
+CAPTCHA Verification
+       │
+       ▼
+Check Existing User
+       │
+       ▼
+Hash Password
+       │
+       ▼
+Create Pending User
+       │
+       ▼
+Generate OTP
+       │
+       ▼
+Send OTP Email
+       │
+       ▼
+User Enters OTP
+       │
+       ▼
+Verify OTP
+       │
+    ┌──┴──┐
+ Invalid  Valid
+    │     │
+    ▼     ▼
+ Error  Create User
+          │
+          ▼
+      Registration Complete
+```
 
-* Enable MFA from the application
+---
+
+# 🛡️ Multi-Factor Authentication
+
+The application supports **TOTP-based Multi-Factor Authentication (MFA)** using authenticator applications.
+
+### Features
+
+* Enable MFA
 * Generate an authenticator secret
-* Generate a QR code for MFA setup
-* Scan the QR code using an authenticator application
+* Generate an `otpauth` URI
+* Generate MFA QR code
+* Scan QR code using an authenticator application
 * Verify authenticator codes
 * Disable MFA
 * MFA verification during login
+* Short-lived MFA JWT
 * TOTP-based authentication
 
 Compatible authenticator applications include:
@@ -45,24 +144,159 @@ Compatible authenticator applications include:
 * Google Authenticator
 * Microsoft Authenticator
 * Authy
-* Other TOTP-compatible authenticator applications
+* Other TOTP-compatible applications
 
-### 💬 Real-Time Messaging
+### MFA Setup
+
+```text
+User opens MFA settings
+          │
+          ▼
+POST /api/mfa/setup
+          │
+          ▼
+Generate Secret
+          │
+          ▼
+Generate OTPAuth URI
+          │
+          ▼
+Generate QR Code
+          │
+          ▼
+User scans QR Code
+          │
+          ▼
+Authenticator Application
+          │
+          ▼
+6-Digit TOTP Code
+          │
+          ▼
+POST /api/mfa/verify
+          │
+          ▼
+MFA Enabled
+```
+
+### MFA Login
+
+```text
+Email + Password
+       │
+       ▼
+Credentials Valid
+       │
+       ▼
+Is MFA Enabled?
+       │
+    ┌──┴──┐
+    │     │
+   No    Yes
+    │     │
+    │     ▼
+    │  Generate MFA JWT
+    │     │
+    │     ▼
+    │  User Enters TOTP
+    │     │
+    │     ▼
+    │  Verify MFA JWT
+    │     │
+    │     ▼
+    │  Verify TOTP
+    │     │
+    └──┬──┘
+       │
+       ▼
+ Generate Normal JWT
+       │
+       ▼
+HTTP-only Cookie
+       │
+       ▼
+Login Successful
+```
+
+---
+
+# 🔑 Forgot Password
+
+The application provides a secure password recovery flow using email OTP verification.
+
+### Password Reset Flow
+
+```text
+Forgot Password
+       │
+       ▼
+Enter Email
+       │
+       ▼
+Check Email
+       │
+       ▼
+Generate Reset OTP
+       │
+       ▼
+Send OTP Email
+       │
+       ▼
+User Enters OTP
+       │
+       ▼
+Verify OTP
+       │
+       ▼
+Generate Password Reset JWT
+       │
+       ▼
+Create New Password
+       │
+       ▼
+Hash Password with bcrypt
+       │
+       ▼
+Update Password in Database
+       │
+       ▼
+Password Reset Successful
+```
+
+### Features
+
+* Forgot-password request
+* Password reset OTP generation
+* Password reset OTP email
+* OTP expiration
+* OTP validation
+* Short-lived password reset JWT
+* Reset token type validation
+* New password hashing with bcrypt
+* Password update in database
+
+---
+
+# 💬 Real-Time Messaging
 
 * One-to-one chat
 * Real-time message sending and receiving
 * Socket.IO integration
-* Persistent messages in MongoDB
+* Persistent messages in MySQL
+* Sequelize ORM
 * Message delivery status
 * Message seen status
-* Chat rooms
 * User-specific Socket.IO rooms
 * Chat history
 * Real-time updates without refreshing the page
 
-### 📞 Real-Time Audio Calling
+---
+
+# 📞 Real-Time Audio Calling
 
 The application supports **one-to-one real-time audio calling using WebRTC**.
+
+### Features
 
 * One-to-one audio calls
 * WebRTC peer-to-peer communication
@@ -72,30 +306,50 @@ The application supports **one-to-one real-time audio calling using WebRTC**.
 * Call acceptance
 * Call rejection
 * Call ending
-* Microphone access using browser MediaDevices API
+* Microphone access using the MediaDevices API
 * WebRTC offer/answer exchange
 * ICE candidate exchange
 * Socket.IO-based WebRTC signaling
 
-### 👤 User Profile
+---
+
+# 👤 User Profile
 
 * View current user profile
 * Update profile information
 * Upload profile picture
 * View other users
-* Unable and Disable MFA
+* Enable MFA
+* Disable MFA
 
-### 📚 API Documentation
+---
 
-* OpenAPI 3.0 specification
+# 📚 API Documentation
+
+The backend uses:
+
+* OpenAPI 3.0
 * Swagger UI
-* API endpoint documentation
-* Request and response documentation
-* Authentication API documentation
-* User API documentation
-* Message API documentation
-* MFA API documentation
-* Interactive API testing through Swagger UI
+* swagger-jsdoc
+* swagger-ui-express
+
+Swagger documentation includes:
+
+* Authentication APIs
+* User APIs
+* Message APIs
+* MFA APIs
+* Password recovery APIs
+* Request bodies
+* Responses
+* HTTP status codes
+* Interactive API testing
+
+Swagger UI is available at:
+
+```text
+http://localhost:5000/api-docs
+```
 
 ---
 
@@ -103,37 +357,39 @@ The application supports **one-to-one real-time audio calling using WebRTC**.
 
 ## Frontend
 
-| Technology       | Purpose                             |
-| ---------------- | ----------------------------------- |
-| React            | Frontend user interface             |
-| Vite             | Frontend development and build tool |
-| React Router     | Client-side routing                 |
-| React Icons      | UI icons                            |
-| Socket.IO Client | Real-time communication             |
-| WebRTC           | Peer-to-peer audio calling          |
-| MediaDevices API | Microphone access                   |
+| Technology          | Purpose                             |
+| ------------------- | ----------------------------------- |
+| React               | Frontend user interface             |
+| Vite                | Frontend development and build tool |
+| React Router        | Client-side routing                 |
+| React Icons         | UI icons                            |
+| Socket.IO Client    | Real-time communication             |
+| WebRTC              | Peer-to-peer audio calling          |
+| MediaDevices API    | Microphone access                   |
+| Google reCAPTCHA v2 | Bot protection                      |
 
 ## Backend
 
-| Technology         | Purpose                                      |
-| ------------------ | -------------------------------------------- |
-| Node.js            | Backend runtime                              |
-| Express.js         | REST API                                     |
-| MongoDB            | Database                                     |
-| Mongoose           | MongoDB ODM                                  |
-| Socket.IO          | Real-time communication and WebRTC signaling |
-| WebRTC             | Peer-to-peer audio communication             |
-| JWT                | Authentication                               |
-| bcryptjs           | Password hashing                             |
-| Cookie Parser      | Cookie handling                              |
-| Multer             | Profile image uploads                        |
-| dotenv             | Environment variables                        |
-| Nodemailer         | Email and OTP sending                        |
-| otplib             | TOTP/MFA implementation                      |
-| qrcode             | MFA QR-code generation                       |
-| swagger-jsdoc      | Generate OpenAPI documentation from comments |
-| swagger-ui-express | Swagger API documentation interface          |
-| OpenAPI            | API specification                            |
+| Technology           | Purpose                                            |
+| -------------------- | -------------------------------------------------- |
+| Node.js              | Backend runtime                                    |
+| Express.js           | REST API                                           |
+| MySQL                | Relational database                                |
+| Sequelize            | ORM for MySQL                                      |
+| Socket.IO            | Real-time communication and WebRTC signaling       |
+| JWT                  | Authentication and temporary authentication tokens |
+| bcryptjs             | Password hashing                                   |
+| Cookie Parser        | Cookie handling                                    |
+| Multer               | Profile image uploads                              |
+| dotenv               | Environment variables                              |
+| Nodemailer           | Email and OTP sending                              |
+| otplib               | TOTP/MFA implementation                            |
+| qrcode               | MFA QR-code generation                             |
+| swagger-jsdoc        | Generate OpenAPI documentation from comments       |
+| swagger-ui-express   | Swagger API documentation interface                |
+| OpenAPI              | API specification                                  |
+| Vitest               | Backend automated testing                          |
+| Google reCAPTCHA API | CAPTCHA verification                               |
 
 ---
 
@@ -147,17 +403,11 @@ chat/
 │   │
 │   ├── src/
 │   │   ├── assets/
-│   │
 │   │   ├── components/
-│   │
 │   │   ├── features/
-│   │
 │   │   ├── routes/
 │   │   │   └── appRoutes.jsx
-│   │
 │   │   ├── services/
-│   │
-│   │
 │   │   ├── App.jsx
 │   │   └── main.jsx
 │   │
@@ -181,7 +431,8 @@ chat/
 │   │
 │   │   ├── models/
 │   │   │   ├── userModel.js
-│   │   │   └── messageModel.js
+│   │   │   ├── messageModel.js
+│   │   │   └── pendingUsers.js
 │   │
 │   │   ├── routes/
 │   │   │   ├── authRoutes.js
@@ -192,6 +443,7 @@ chat/
 │   │
 │   │   ├── services/
 │   │   │   ├── authServices.js
+│   │   │   ├── captchaService.js
 │   │   │   ├── messageServices.js
 │   │   │   ├── mfaServices.js
 │   │   │   └── userServices.js
@@ -199,6 +451,7 @@ chat/
 │   │   ├── utils/
 │   │   │   ├── jwt.js
 │   │   │   ├── socketHelper.js
+│   │   │   ├── nodemailer.js
 │   │   │   └── swagger.js
 │   │
 │   │   ├── uploads/
@@ -232,7 +485,7 @@ cd chat
 
 # ⚙️ Backend Setup
 
-Open a terminal and move into the server directory:
+Move into the server directory:
 
 ```bash
 cd server
@@ -246,35 +499,43 @@ npm install
 
 ---
 
-## 🔑 Environment Variables
+# 🔑 Environment Variables
 
 Create a `.env` file inside the `server` directory.
+
+Example:
 
 ```env
 PORT=5000
 
-DB_HOST=YOUR_DB_HOST
-DB_PORT=PORT
+DB_HOST=localhost
+DB_PORT=3306
 DB_USER=your_db_username
-DB_PASSWORD= your_db_password
-DB_NAME= your_db_name
+DB_PASSWORD=your_db_password
+DB_NAME=your_db_name
 
 JWT_SECRET_KEY=your_jwt_secret
-SALT_ROUND= number
 
 EMAIL=your_email
 PASS=your_email_password
+
+RECAPTCHA_SECRET_KEY=your_recaptcha_secret_key
 ```
 
-### Environment Variables
+## Environment Variables
 
-| Variable         | Description                               |
-| ---------------- | ----------------------------------------- |
-| `PORT`           | Port on which the backend server runs     |
-| `SQL`            | SQL configuration                         |
-| `JWT_SECRET_KEY` | Secret key used for JWT authentication    |
-| `EMAIL_USER`     | Email address used for sending OTP emails |
-| `EMAIL_PASSWORD` | Email/SMTP credential used by Nodemailer  |
+| Variable               | Description                            |
+| ---------------------- | -------------------------------------- |
+| `PORT`                 | Port on which the backend server runs  |
+| `DB_HOST`              | MySQL database host                    |
+| `DB_PORT`              | MySQL database port                    |
+| `DB_USER`              | MySQL username                         |
+| `DB_PASSWORD`          | MySQL password                         |
+| `DB_NAME`              | MySQL database name                    |
+| `JWT_SECRET_KEY`       | Secret key used for JWT authentication |
+| `EMAIL`                | Email address used by Nodemailer       |
+| `PASS`                 | Email/SMTP password or app password    |
+| `RECAPTCHA_SECRET_KEY` | Google reCAPTCHA secret key            |
 
 > ⚠️ Never commit your `.env` file to GitHub.
 
@@ -282,10 +543,16 @@ PASS=your_email_password
 
 # 📦 Required Backend Packages
 
-The application uses the following packages for email verification, MFA, and API documentation:
+The project uses packages for authentication, email verification, MFA, CAPTCHA, API documentation, database management, and testing.
 
 ```bash
-npm install nodemailer otplib qrcode swagger-jsdoc swagger-ui-express
+npm install bcryptjs jsonwebtoken cookie-parser nodemailer otplib qrcode multer sequelize mysql2 swagger-jsdoc swagger-ui-express
+```
+
+For development:
+
+```bash
+npm install -D vitest
 ```
 
 ---
@@ -316,9 +583,7 @@ The backend HTTP server is also used by Socket.IO for real-time communication.
 
 # 💻 Frontend Setup
 
-Open another terminal.
-
-From the project root:
+Open another terminal and move into the client directory:
 
 ```bash
 cd client
@@ -350,8 +615,6 @@ http://localhost:5173
 
 # 🌐 Application Flow
 
-The main application flow is:
-
 ```text
                     ┌──────────────┐
                     │     User     │
@@ -363,9 +626,14 @@ The main application flow is:
                     └──────┬───────┘
                            │
                            ▼
-                 ┌────────────────────┐
-                 │ Email OTP Verify   │
-                 └─────────┬──────────┘
+                  ┌──────────────────┐
+                  │ Google CAPTCHA   │
+                  └────────┬─────────┘
+                           │
+                           ▼
+                  ┌──────────────────┐
+                  │ Email OTP Verify │
+                  └────────┬─────────┘
                            │
                            ▼
                     ┌──────────────┐
@@ -406,23 +674,27 @@ The user provides:
 {
   "name": "John Doe",
   "email": "john@example.com",
-  "password": "password123"
+  "password": "password123",
+  "captchaToken": "captcha-token"
 }
 ```
 
 The registration process:
 
-1. Checks whether the email already exists.
-2. Hashes the password using bcrypt.
-3. Creates the user.
-4. Generates an OTP.
-5. Sends the OTP through email.
-6. User verifies the OTP.
-7. The account becomes verified.
+1. Receives registration information.
+2. Verifies the Google reCAPTCHA token.
+3. Checks whether the email already exists.
+4. Checks for an existing pending registration.
+5. Hashes the password using bcrypt.
+6. Generates a verification OTP.
+7. Creates a pending user record.
+8. Sends the OTP through email.
+9. User verifies the OTP.
+10. The pending user is converted into a verified user account.
 
 ---
 
-## Login
+# 🔑 Login
 
 The user provides:
 
@@ -436,18 +708,20 @@ The user provides:
 The login process:
 
 1. Finds the user by email.
-2. Compares the provided password with the hashed password.
+2. Compares the password using bcrypt.
 3. Checks whether MFA is enabled.
-4. If MFA is disabled, authentication is completed.
-5. If MFA is enabled, the user must provide an authenticator code.
-6. After successful verification, a JWT is generated.
-7. The JWT is stored in an HTTP-only cookie.
+4. If MFA is disabled, generates a normal JWT.
+5. If MFA is enabled, generates a short-lived MFA JWT.
+6. The user enters the authenticator code.
+7. The MFA JWT and authenticator code are verified.
+8. A normal authentication JWT is generated.
+9. The JWT is stored in an HTTP-only cookie.
 
 ---
 
 # 📧 Email OTP Verification
 
-The application uses **Nodemailer** to send OTP verification emails.
+The application uses **Nodemailer** for email OTP delivery.
 
 ## OTP Flow
 
@@ -456,6 +730,9 @@ Register
    │
    ▼
 Generate OTP
+   │
+   ▼
+Create Pending User
    │
    ▼
 Send OTP Email
@@ -468,27 +745,91 @@ Verify OTP
    │
    ├── Invalid ──► Show Error
    │
+   ├── Expired ──► Show Error
+   │
    └── Valid
          │
          ▼
-   Account Verified
+   Create User Account
 ```
 
-OTP verification includes:
+---
 
-* Random OTP generation
-* Email delivery
-* OTP expiration
-* OTP validation
-* Invalid OTP handling
+# 🔑 Forgot Password
+
+## Request Reset OTP
+
+```http
+POST /api/auth/forgot-password
+```
+
+Request:
+
+```json
+{
+  "email": "john@example.com"
+}
+```
+
+The backend:
+
+1. Checks whether the email exists.
+2. Generates a reset OTP.
+3. Stores the OTP and expiration time.
+4. Sends the OTP through email.
+
+---
+
+## Verify Reset OTP
+
+```http
+POST /api/auth/verify-reset-otp
+```
+
+Request:
+
+```json
+{
+  "email": "john@example.com",
+  "otp": "123456"
+}
+```
+
+If the OTP is valid, the backend generates a short-lived password-reset JWT.
+
+---
+
+## Reset Password
+
+```http
+POST /api/auth/reset-password
+```
+
+Request:
+
+```json
+{
+  "resetToken": "password-reset-jwt",
+  "newPassword": "newPassword123"
+}
+```
+
+The backend:
+
+1. Verifies the reset JWT.
+2. Checks the token type.
+3. Finds the user.
+4. Hashes the new password using bcrypt.
+5. Updates the password in MySQL.
+6. Returns a successful response.
 
 ---
 
 # 🔒 Multi-Factor Authentication
 
-The application implements **TOTP-based MFA** using an authenticator application.
+The application implements **TOTP-based MFA** using `otplib`.
 
-## MFA Setup Flow
+## MFA Setup
 
 ```text
 User opens MFA settings
@@ -521,59 +862,26 @@ POST /api/mfa/verify
 MFA Enabled
 ```
 
-The MFA implementation generates a secret and an `otpauth` URI, which is converted into a QR code that can be scanned by an authenticator application.
-
----
-
-## MFA Login Flow
-
-```text
-Email + Password
-       │
-       ▼
-Credentials Valid
-       │
-       ▼
-Is MFA Enabled?
-       │
-    ┌──┴──┐
-    │     │
-   No    Yes
-    │     │
-    │     ▼
-    │  MFA Code
-    │     │
-    │     ▼
-    │  Verify TOTP
-    │     │
-    └──┬──┘
-       │
-       ▼
- Generate JWT
-       │
-       ▼
- Login Successful
-```
-
 ---
 
 # 📞 WebRTC Audio Calling
 
 The application supports **one-to-one audio calling using WebRTC**.
 
-WebRTC provides peer-to-peer communication between two browsers, while Socket.IO is used as the signaling mechanism to exchange the information required to establish the connection.
+WebRTC provides peer-to-peer audio communication between browsers, while Socket.IO acts as the signaling channel.
 
 ## Audio Call Architecture
 
 ```text
              Socket.IO Signaling
+
                     │
           ┌─────────┴─────────┐
           │                   │
           ▼                   ▼
        User A               User B
           │                   │
-          │    WebRTC         │
+          │      WebRTC       │
           └─────────┬─────────┘
                     │
                     ▼
@@ -585,61 +893,9 @@ WebRTC provides peer-to-peer communication between two browsers, while Socket.IO
 
 ---
 
-## WebRTC Call Flow
+# 🎙️ Microphone Access
 
-```text
-Caller
-  │
-  ▼
-Start Audio Call
-  │
-  ▼
-Send Call Request
-  │
-  │ Socket.IO
-  ▼
-Receiver
-  │
-  ├── Reject ──────► Call Ended
-  │
-  └── Accept
-       │
-       ▼
-Create RTCPeerConnection
-       │
-       ▼
-Get Microphone Stream
-       │
-       ▼
-Create WebRTC Offer
-       │
-       ▼
-Send Offer
-       │
-       ▼
-Receiver Creates Answer
-       │
-       ▼
-Send Answer
-       │
-       ▼
-Exchange ICE Candidates
-       │
-       ▼
-Establish Peer Connection
-       │
-       ▼
-Real-Time Audio
-       │
-       ▼
-End Call
-```
-
----
-
-## Microphone Access
-
-The browser's MediaDevices API is used to access the user's microphone.
+The browser's MediaDevices API is used to request microphone access:
 
 ```javascript
 const stream = await navigator.mediaDevices.getUserMedia({
@@ -651,59 +907,13 @@ The returned audio stream is added to the WebRTC peer connection.
 
 ---
 
-## WebRTC Offer
-
-The caller creates an SDP offer:
-
-```javascript
-const offer = await peerConnection.createOffer();
-
-await peerConnection.setLocalDescription(offer);
-```
-
-The offer is then sent to the receiver through Socket.IO.
-
----
-
-## WebRTC Answer
-
-The receiver sets the received offer as the remote description and creates an answer:
-
-```javascript
-await peerConnection.setRemoteDescription(offer);
-
-const answer = await peerConnection.createAnswer();
-
-await peerConnection.setLocalDescription(answer);
-```
-
-The answer is then sent back to the caller through Socket.IO.
-
----
-
-## ICE Candidate Exchange
-
-WebRTC uses ICE candidates to discover a suitable network path between the two peers.
-
-```javascript
-peerConnection.onicecandidate = (event) => {
-  if (event.candidate) {
-    // Send ICE candidate through Socket.IO
-  }
-};
-```
-
-After the required signaling information is exchanged, the browsers establish the peer-to-peer connection.
-
----
-
 # 🔌 Socket.IO Real-Time Communication
 
 Socket.IO is used for:
 
 * Real-time messaging
 * User connection management
-* Chat rooms
+* User-specific rooms
 * Message delivery events
 * Message seen events
 * Audio call signaling
@@ -716,106 +926,9 @@ Socket.IO is used for:
 
 ---
 
-## Important Socket Events
-
-### `join`
-
-Used when a user joins their personal Socket.IO room.
-
-```javascript
-socket.emit("join", userId);
-```
-
----
-
-### `openChat`
-
-Used when a user opens a conversation.
-
-```javascript
-socket.emit("openChat", {
-  userId,
-  otherUserId,
-});
-```
-
----
-
-### `closeChat`
-
-Used when a user closes a conversation.
-
-```javascript
-socket.emit("closeChat", {
-  userId,
-  otherUserId,
-});
-```
-
----
-
-### `sendMessage`
-
-Used to send a message in real time.
-
-```javascript
-socket.emit("sendMessage", {
-  senderId,
-  receiverId,
-  text,
-});
-```
-
----
-
-### `receiveMessage`
-
-Used to receive a new message.
-
-```javascript
-socket.on("receiveMessage", (message) => {
-  // Update chat UI
-});
-```
-
----
-
-### `messageSent`
-
-Notifies the sender that the message was successfully saved.
-
----
-
-### `messageDelivered`
-
-Notifies the sender that the message was delivered to the receiver.
-
----
-
-### `messagesSeen`
-
-Used when messages have been viewed by the receiver.
-
----
-
-### `markSeen`
-
-Used to mark messages as seen.
-
-```javascript
-socket.emit("markSeen", {
-  receiverId,
-  senderId,
-});
-```
-
----
-
 # 📞 WebRTC Signaling
 
 Socket.IO is used as the signaling channel for WebRTC.
-
-The signaling process exchanges:
 
 ```text
 Call Request
@@ -831,6 +944,9 @@ ICE Candidates
      │
      ▼
 WebRTC Connection
+     │
+     ▼
+Real-Time Audio
 ```
 
 The actual audio communication is handled by **WebRTC**, not Socket.IO.
@@ -841,13 +957,11 @@ The actual audio communication is handled by **WebRTC**, not Socket.IO.
 
 Profile images are uploaded using **Multer**.
 
-Uploaded profile images are stored in:
+Uploaded images are stored in:
 
 ```text
 server/src/uploads/profileAvatars/
 ```
-
-The Express server exposes the uploads directory so that profile images can be accessed by the frontend.
 
 ---
 
@@ -855,11 +969,11 @@ The Express server exposes the uploads directory so that profile images can be a
 
 The backend uses:
 
-* **OpenAPI 3.0**
-* **swagger-jsdoc**
-* **swagger-ui-express**
+* OpenAPI 3.0
+* swagger-jsdoc
+* swagger-ui-express
 
-Swagger documentation is generated from API documentation comments written above the routes.
+Swagger documentation is generated from comments written above the routes.
 
 ## Swagger UI
 
@@ -873,9 +987,8 @@ Swagger UI allows developers to:
 
 * View available APIs
 * Read API descriptions
-* View request parameters
 * View request bodies
-* View response schemas
+* View response information
 * View HTTP status codes
 * Test APIs directly from the browser
 
@@ -891,14 +1004,17 @@ Base URL:
 http://localhost:5000/api/auth
 ```
 
-| Method | Endpoint      | Description               |
-| ------ | ------------- | ------------------------- |
-| POST   | `/register`   | Register a new user       |
-| POST   | `/login`      | Login user                |
-| GET    | `/verify`     | Verify authenticated user |
-| POST   | `/logout`     | Logout user               |
-| POST   | `/verify-otp` | Verify email OTP          |
-| POST   | `/verify-mfa` | Verify MFA during login   |
+| Method | Endpoint            | Description                   |
+| ------ | ------------------- | ----------------------------- |
+| POST   | `/register`         | Register a new user           |
+| POST   | `/login`            | Login user                    |
+| GET    | `/verify`           | Verify authenticated user     |
+| POST   | `/logout`           | Logout user                   |
+| POST   | `/verify-otp`       | Verify registration email OTP |
+| POST   | `/verify-mfa`       | Verify MFA during login       |
+| POST   | `/forgot-password`  | Request password reset OTP    |
+| POST   | `/verify-reset-otp` | Verify password reset OTP     |
+| POST   | `/reset-password`   | Reset user password           |
 
 ---
 
@@ -947,84 +1063,68 @@ http://localhost:5000/api/mfa
 | POST   | `/verify`  | Verify authenticator code and enable MFA |
 | POST   | `/disable` | Disable MFA                              |
 
-### Setup
-
-```http
-POST /api/mfa/setup
-```
-
-Requires authentication.
-
-Example response:
-
-```json
-{
-  "qrCode": "data:image/png;base64,..."
-}
-```
-
-### Verify MFA Setup
-
-```http
-POST /api/mfa/verify
-```
-
-Request:
-
-```json
-{
-  "token": "123456"
-}
-```
-
-### Disable MFA
-
-```http
-POST /api/mfa/disable
-```
-
-Requires authentication.
-
 ---
 
 # 🗄️ Database
 
-The application uses **MongoDB** with **Mongoose**.
+The application uses **MySQL** as its relational database and **Sequelize** as the ORM.
 
-## User
+## User Model
 
-The user model contains information such as:
+The user model contains fields such as:
 
 ```text
+id
 name
 email
 password
-socketId
 profileImage
-status
-lastSeen
+mfaEnabled
+mfaSecret
+resetPasswordOtp
+resetPasswordOtpExpiredAt
 createdAt
 updatedAt
 ```
 
-The email is unique and user records contain timestamps.
+The email field is unique.
 
 ---
 
-## Message
+## Pending User Model
+
+Pending registrations are temporarily stored before email verification.
+
+```text
+id
+name
+email
+password
+otp
+otpExpiredAt
+createdAt
+updatedAt
+```
+
+After successful OTP verification, the pending user is converted into a regular user account.
+
+---
+
+## Message Model
 
 Messages contain information such as:
 
 ```text
-sender
-receiver
+id
+senderId
+receiverId
 message
 status
 createdAt
 updatedAt
 ```
 
-Messages are persisted in MongoDB and their status can be updated when they are delivered or seen.
+Messages are persisted in MySQL and their delivery/seen status can be updated.
 
 ---
 
@@ -1034,21 +1134,42 @@ The backend follows a layered architecture:
 
 ```text
                     Client
+
                       │
+
                       ▼
+
                    Routes
+
                       │
+
                       ▼
+
                  Controllers
+
                       │
+
                       ▼
+
                    Services
+
                       │
+
                       ▼
-                    Models
+
+                   Models
+
                       │
+
                       ▼
-                  MongoDB
+
+                 Sequelize
+
+                      │
+
+                      ▼
+
+                    MySQL
 ```
 
 ### Routes
@@ -1065,7 +1186,7 @@ Contain the application's business logic.
 
 ### Models
 
-Define MongoDB schemas.
+Define Sequelize database models.
 
 ### Middleware
 
@@ -1076,7 +1197,8 @@ Handles authentication and file uploads.
 Contains reusable functionality such as:
 
 * JWT helpers
-* Socket.IO functionality
+* Socket.IO helpers
+* Nodemailer configuration
 * Swagger configuration
 
 ---
@@ -1098,7 +1220,9 @@ Auth Service
      │
      ├── bcrypt
      │
-     ├── MongoDB
+     ├── Sequelize
+     │
+     ├── MySQL
      │
      └── JWT
      │
@@ -1107,6 +1231,30 @@ HTTP-only Cookie
      │
      ▼
 Protected API Requests
+```
+
+For MFA-enabled users:
+
+```text
+Login
+  │
+  ▼
+Password Verification
+  │
+  ▼
+MFA Enabled?
+  │
+  ▼
+Generate Short-lived MFA JWT
+  │
+  ▼
+Verify Authenticator Code
+  │
+  ▼
+Generate Normal JWT
+  │
+  ▼
+HTTP-only Cookie
 ```
 
 ---
@@ -1121,18 +1269,19 @@ React Client
 Socket.IO Server
       │
       ├── User Rooms
-      │
-      ├── Chat Rooms
-      │
+      ├── Chat Events
       ├── Message Events
-      │
-      └── Delivery/Seen Events
+      ├── Delivery Events
+      └── Seen Events
       │
       ▼
 Message Service
       │
       ▼
-MongoDB
+Sequelize
+      │
+      ▼
+MySQL
 ```
 
 ---
@@ -1165,6 +1314,38 @@ WebRTC Peer Connection
 
 ---
 
+# 🤖 CAPTCHA Architecture
+
+```text
+React Registration Form
+          │
+          ▼
+Google reCAPTCHA v2
+          │
+          ▼
+CAPTCHA Token
+          │
+          ▼
+Express Backend
+          │
+          ▼
+CAPTCHA Service
+          │
+          ▼
+Google reCAPTCHA API
+          │
+      ┌───┴────┐
+      │        │
+    Failed   Success
+      │        │
+      ▼        ▼
+    Error   Registration
+```
+
+The CAPTCHA secret key remains on the backend and is never exposed to the React client.
+
+---
+
 # 🔐 Security
 
 The application uses several security mechanisms:
@@ -1175,24 +1356,16 @@ The application uses several security mechanisms:
 * Protected API routes
 * Password verification
 * TOTP-based MFA
-* Environment variables for secrets
-* CORS configuration
-* Mongoose schema validation
+* Short-lived MFA JWT
+* Short-lived password reset JWT
+* Google reCAPTCHA v2
 * OTP expiration
 * Authentication middleware
-
-### Production Security Recommendations
-
-For production deployment:
-
-* Use HTTPS.
-* Enable secure cookies.
-* Restrict CORS to trusted frontend origins.
-* Use a strong JWT secret.
-* Keep database credentials private.
-* Keep email credentials private.
-* Never expose server secrets to the React client.
-* Configure production SMTP credentials securely.
+* Environment variables for secrets
+* CORS configuration
+* Sequelize model validation
+* Email OTP verification
+* CAPTCHA verification
 
 ---
 
@@ -1200,20 +1373,57 @@ For production deployment:
 
 The backend uses **Vitest** for automated testing.
 
-Testing includes service and controller use cases such as:
+Testing covers both services and controllers.
+
+### Authentication Testing
 
 * User registration
 * Existing email validation
+* CAPTCHA verification
 * Password hashing
+* Email OTP generation
+* Email OTP verification
+* Invalid OTP handling
+* Expired OTP handling
 * User login
 * Invalid login credentials
+* MFA login flow
 * User verification
 * Logout
-* Current user retrieval
-* Profile updates
-* Profile image upload handling
-* Message operations
+
+### Password Recovery Testing
+
+* Forgot-password success
+* Missing email
+* Non-existing email
+* Password reset email failure
+* Reset OTP verification
+* Invalid reset OTP
+* Expired reset OTP
+* Invalid reset token
+* Expired reset token
+* Password update
+* Missing user during password reset
+
+### MFA Testing
+
+* MFA setup
+* MFA setup failure
+* MFA verification
+* Invalid authenticator code
+* MFA disable
+* MFA login
+* Invalid MFA token
+* Expired MFA session
+
+### Other Testing
+
+* User services
+* User controllers
+* Message services
+* Message controllers
 * Authentication middleware
+* Profile operations
 
 Run the tests from the `server` directory:
 
@@ -1303,23 +1513,28 @@ The application currently includes:
 * ✅ Vite
 * ✅ Node.js backend
 * ✅ Express REST API
-* ✅ MongoDB
-* ✅ Mongoose
+* ✅ MySQL
+* ✅ Sequelize
 * ✅ User registration
+* ✅ Google reCAPTCHA v2
 * ✅ User login
 * ✅ User logout
 * ✅ JWT authentication
 * ✅ HTTP-only authentication cookies
 * ✅ Protected routes
 * ✅ Password hashing
+* ✅ Email OTP verification
+* ✅ Pending registration flow
+* ✅ Forgot-password functionality
+* ✅ Password reset OTP
+* ✅ Password reset JWT
+* ✅ Password update and hashing
 * ✅ User profile management
 * ✅ Profile image upload
 * ✅ One-to-one real-time messaging
 * ✅ Socket.IO integration
 * ✅ Message delivery status
 * ✅ Message seen status
-* ✅ Email OTP verification
-* ✅ Nodemailer integration
 * ✅ Multi-Factor Authentication
 * ✅ TOTP authentication
 * ✅ Authenticator QR-code generation
@@ -1333,7 +1548,9 @@ The application currently includes:
 * ✅ Audio call accept/reject/end flow
 * ✅ Swagger API documentation
 * ✅ OpenAPI 3.0
-* ✅ Backend testing with Vitest
+* ✅ Swagger UI
+* ✅ Backend service testing with Vitest
+* ✅ Backend controller testing with Vitest
 
 ---
 
@@ -1341,44 +1558,8 @@ The application currently includes:
 
 ## Hadia Shahid
 
-GitHub:
+GitHub: Hadia Shahid
 
-https://github.com/HadiaShahid0
-
-Repository:
-
-https://github.com/HadiaShahid0/chat
+Repository: MERN Real-Time Chat Application
 
 ---
-
-# ❤️ Acknowledgement
-
-This project was built as a full-stack learning project to practice and demonstrate:
-
-* React
-* Vite
-* Node.js
-* Express.js
-* MongoDB
-* Mongoose
-* REST APIs
-* JWT authentication
-* bcrypt
-* HTTP-only cookies
-* Protected routes
-* Socket.IO
-* WebRTC
-* Peer-to-peer communication
-* MediaDevices API
-* Multer
-* Nodemailer
-* Email OTP verification
-* Multi-Factor Authentication
-* TOTP
-* QR-code generation
-* Swagger
-* OpenAPI
-* API testing
-* Vitest
-* Backend architecture
-* Real-time application development
