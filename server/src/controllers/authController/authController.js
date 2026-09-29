@@ -3,15 +3,20 @@ import {
   loginService,
   verifyService,
   logoutService,
-  verifyOtpService
+  verifyOtpService,
+  forgotPasswordService,
+  verifyResetOtpService,
+resetPasswordService
 } from "../../services/authServices.js";
+import jwt from "jsonwebtoken";
+
 import {verifyMfaLoginService} from "../../services/mfaServices.js"
 // Register
 export const register = async (req, res) => {
   try {
-    const { name, email, password } = req.body;
+    const { name, email, password,captchaToken } = req.body;
 
-    const { user, token } = await registerService(name, email, password);
+    const { user, token } = await registerService(name, email, password,captchaToken);
 
     res.cookie("token", token, {
       httpOnly: true,
@@ -147,6 +152,98 @@ export const verifyMfaLogin = async (req, res) => {
     return res.status(401).json({
       success: false,
       message: error.message,
+    });
+  }
+};
+
+export const forgotPassword = async (req, res) => {
+  try {
+    const { email } = req.body;
+
+    if (!email) {
+      return res.status(400).json({
+        success: false,
+        message: "Email is required.",
+      });
+    }
+
+    const result = await forgotPasswordService(email);
+
+    return res.status(200).json({
+      success: true,
+      ...result,
+    });
+  } catch (error) {
+    return res.status(500).json({
+      success: false,
+      message: error.message,
+    });
+  }
+};
+
+export const verifyResetOtp = async (req, res) => {
+  try {
+    const { email, otp } = req.body;
+
+    if (!email || !otp) {
+      return res.status(400).json({
+        success: false,
+        message: "Email and OTP are required.",
+      });
+    }
+
+    const result = await verifyResetOtpService(email, otp);
+
+    return res.status(200).json({
+      success: true,
+      ...result,
+    });
+  } catch (error) {
+    return res.status(400).json({
+      success: false,
+      message: error.message,
+    });
+  }
+};
+export const resetPassword = async (req, res) => {
+  try {
+    const { resetToken, newPassword } = req.body;
+
+    if (!resetToken || !newPassword) {
+      return res.status(400).json({
+        success: false,
+        message: "Reset token and new password are required.",
+      });
+    }
+
+    const decoded = jwt.verify(
+      resetToken,
+      process.env.JWT_SECRET_KEY
+    );
+
+    if (decoded.type !== "password-reset") {
+      return res.status(401).json({
+        success: false,
+        message: "Invalid reset token.",
+      });
+    }
+
+    const result = await resetPasswordService(
+      decoded.userId,
+      newPassword
+    );
+
+    return res.status(200).json({
+      success: true,
+      ...result,
+    });
+  } catch (error) {
+    return res.status(401).json({
+      success: false,
+      message:
+        error.name === "TokenExpiredError"
+          ? "Reset token has expired."
+          : error.message,
     });
   }
 };

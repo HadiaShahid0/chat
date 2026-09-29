@@ -1,14 +1,21 @@
 import { useState } from "react";
 import { Link, useNavigate } from "react-router-dom";
-import { FiEye, FiEyeOff, FiUser, FiMail, FiLock } from "react-icons/fi";
+import {
+  FiEye,
+  FiEyeOff,
+  FiUser,
+  FiMail,
+  FiLock,
+} from "react-icons/fi";
+import ReCAPTCHA from "react-google-recaptcha";
 import { register } from "../services/authServices";
 
 const RegisterForm = () => {
   const navigate = useNavigate();
 
   const [showPassword, setShowPassword] = useState(false);
-
   const [loading, setLoading] = useState(false);
+  const [captchaToken, setCaptchaToken] = useState("");
 
   const [formData, setFormData] = useState({
     name: "",
@@ -23,37 +30,56 @@ const RegisterForm = () => {
     });
   };
 
-const handleSubmit = async (e) => {
-  e.preventDefault();
+  const handleCaptchaChange = (token) => {
+    setCaptchaToken(token || "");
+  };
 
-  if (!formData.name.trim()) {
-    return alert("Name is required.");
-  }
+  const handleSubmit = async (e) => {
+    e.preventDefault();
 
-  if (!formData.email.trim()) {
-    return alert("Email is required.");
-  }
+    // Basic validation
+    if (!formData.name.trim()) {
+      return alert("Name is required.");
+    }
 
-  if (!formData.password.trim()) {
-    return alert("Password is required.");
-  }
+    if (!formData.email.trim()) {
+      return alert("Email is required.");
+    }
 
-  try {
-    setLoading(true);
+    if (!formData.password.trim()) {
+      return alert("Password is required.");
+    }
 
-    await register(formData);
+    // CAPTCHA validation
+    if (!captchaToken) {
+      return alert("Please complete the CAPTCHA.");
+    }
 
-    navigate("/verify-otp", {
-      state: {
-        email: formData.email,
-      },
-    });
-  } catch (error) {
-    alert(error.message);
-  } finally {
-    setLoading(false);
-  }
-};
+    try {
+      setLoading(true);
+
+      // Send CAPTCHA token to backend
+      await register({
+        ...formData,
+        captchaToken,
+      });
+
+      // Move to OTP verification page
+      navigate("/verify-otp", {
+        state: {
+          email: formData.email,
+        },
+      });
+    } catch (error) {
+      alert(error.message);
+
+      // CAPTCHA tokens are temporary/single-use,
+      // so allow the user to complete it again.
+      setCaptchaToken("");
+    } finally {
+      setLoading(false);
+    }
+  };
 
   return (
     <div
@@ -61,11 +87,16 @@ const handleSubmit = async (e) => {
       style={{ width: "550px" }}
     >
       <div className="card-body p-5">
-        <h2 className="fw-bold text-center mb-2">Create Account</h2>
+        <h2 className="fw-bold text-center mb-2">
+          Create Account
+        </h2>
 
-        <p className="text-center text-muted mb-4">Welcome to Chat App</p>
+        <p className="text-center text-muted mb-4">
+          Welcome to Chat App
+        </p>
 
         <form onSubmit={handleSubmit}>
+          {/* Name */}
           <div className="mb-3">
             <label className="form-label">Full Name</label>
 
@@ -85,6 +116,7 @@ const handleSubmit = async (e) => {
             </div>
           </div>
 
+          {/* Email */}
           <div className="mb-3">
             <label className="form-label">Email</label>
 
@@ -104,6 +136,7 @@ const handleSubmit = async (e) => {
             </div>
           </div>
 
+          {/* Password */}
           <div className="mb-4">
             <label className="form-label">Password</label>
 
@@ -131,14 +164,31 @@ const handleSubmit = async (e) => {
             </div>
           </div>
 
-          <button className="btn btn-secondary w-100" disabled={loading}>
+          {/* Google reCAPTCHA */}
+          <div className="mb-4">
+            <ReCAPTCHA
+              sitekey={import.meta.env.VITE_RECAPTCHA_SITE_KEY}
+              onChange={handleCaptchaChange}
+            />
+          </div>
+
+          {/* Register Button */}
+          <button
+            type="submit"
+            className="btn btn-secondary w-100"
+            disabled={loading || !captchaToken}
+          >
             {loading ? "Creating Account..." : "Register"}
           </button>
         </form>
 
         <p className="text-center mt-4 mb-0">
           Already have an account?
-          <Link to="/login" className="ms-2 text-decoration-none fw-semibold">
+
+          <Link
+            to="/login"
+            className="ms-2 text-decoration-none fw-semibold"
+          >
             Login
           </Link>
         </p>

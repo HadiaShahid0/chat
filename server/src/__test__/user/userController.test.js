@@ -146,6 +146,7 @@ describe("User Controller", () => {
       message: "Unable to update profile.",
     });
   });
+  
   it("upload profile image successfully", async () => {
     const req = {
       user: {

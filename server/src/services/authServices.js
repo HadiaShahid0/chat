@@ -1,10 +1,12 @@
 import bcrypt from "bcryptjs";
 import User from "../models/userModel.js";
 import PendingUser from "../models/pendingUsers.js";
-import { generateToken, generateMfaToken } from "../utils/jwt.js";
+import { generateToken, generateMfaToken,generatePasswordResetToken } from "../utils/jwt.js";
 import transporter from "../utils/nodemailer.js";
-
-export const registerService = async (name, email, password) => {
+import { verifyCaptcha } from "./captchaService.js";
+import crypto from "crypto";
+export const registerService = async (name, email, password,captchaToken) => {
+  await verifyCaptcha(captchaToken)
   const existingUser = await User.findOne({
     where: { email },
   });
@@ -154,5 +156,112 @@ export const verifyOtpService = async (email, otp) => {
   return {
     message: "Email verified and account created successfully.",
     user,
+  };
+};
+
+
+export const forgotPasswordService = async (email) => {
+  const user = await User.findOne({
+    where: { email },
+  });
+
+  if (!user) {
+    throw new Error("Email does not exist.");
+  }
+  const resetPasswordOtp = crypto
+    .randomInt(100000, 1000000)
+    .toString();
+
+  const resetPasswordOtpExpiredAt = new Date(
+    Date.now() + 3 * 60 * 1000
+  );
+
+  await user.update({
+    resetPasswordOtp,
+    resetPasswordOtpExpiredAt,
+  });
+
+  const mailOption = {
+    from: process.env.EMAIL,
+    to: email,
+    subject: "Password Reset OTP",
+    text: `Your password reset OTP is ${resetPasswordOtp}. This OTP will expire in 10 minutes.`,
+  };
+
+  try {
+    await transporter.sendMail(mailOption);
+
+    return {
+      message: "Password reset OTP sent successfully.",
+    };
+  } catch (error) {
+    console.log("Password reset email error:", error);
+
+    await user.update({
+      resetPasswordOtp: null,
+      resetPasswordOtpExpiredAt: null,
+    });
+
+    throw new Error("Unable to send password reset email.");
+  }
+};
+
+export const verifyResetOtpService = async (email, otp) => {
+  const user = await User.findOne({
+    where: { email },
+  });
+
+  if (!user || !user.resetPasswordOtp) {
+    throw new Error("Invalid or expired OTP.");
+  }
+
+  if (
+    !user.resetPasswordOtpExpiredAt ||
+    new Date() > new Date(user.resetPasswordOtpExpiredAt)
+  ) {
+    await user.update({
+      resetPasswordOtp: null,
+      resetPasswordOtpExpiredAt: null,
+    });
+
+    throw new Error("OTP has expired.");
+  }
+
+  if (user.resetPasswordOtp !== otp.toString()) {
+    throw new Error("Invalid OTP.");
+  }
+
+  const resetToken = generatePasswordResetToken(user.id);
+
+  // OTP cannot be reused
+  await user.update({
+    resetPasswordOtp: null,
+    resetPasswordOtpExpiredAt: null,
+  });
+
+  return {
+    message: "OTP verified successfully.",
+    resetToken,
+  };
+};
+
+export const resetPasswordService = async (
+  userId,
+  newPassword
+) => {
+  const user = await User.findByPk(userId);
+
+  if (!user) {
+    throw new Error("User not found.");
+  }
+
+  const hashedPassword = await bcrypt.hash(newPassword, 10);
+
+  await user.update({
+    password: hashedPassword,
+  });
+
+  return {
+    message: "Password reset successfully.",
   };
 };

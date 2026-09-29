@@ -29,3 +29,16 @@ export const generateMfaToken = (userId) => {
     },
   );
 };
+
+export const generatePasswordResetToken = (userId) => {
+  return jwt.sign(
+    {
+      userId,
+      type: "password-reset",
+    },
+    process.env.JWT_SECRET_KEY,
+    {
+      expiresIn: "3m",
+    },
+  );
+};

@@ -91,6 +91,7 @@ export const verifyMfaLoginService = async (mfaToken, token) => {
     console.log("MFA JWT ERROR:", error);
     console.log("MFA JWT ERROR:", error.name);
     console.log("MFA JWT MESSAGE:", error.message);
+    throw new Error("Invalid or expired MFA session.");
   }
 
   console.log("DECODED MFA TOKEN:", decoded);

@@ -24,46 +24,46 @@ const LoginForm = () => {
     });
   };
 
- const handleSubmit = async (e) => {
-  e.preventDefault();
+  const handleSubmit = async (e) => {
+    e.preventDefault();
 
-  if (!formData.email.trim()) {
-    return alert("Email is required.");
-  }
-
-  if (!formData.password.trim()) {
-    return alert("Password is required.");
-  }
-
-  try {
-    setLoading(true);
-
-    const response = await login(formData);
-
-    // MFA is required
-    if (response.requiresMfa) {
-      navigate("/mfa-login", {
-        state: {
-          mfaToken: response.mfaToken,
-        },
-      });
-
-      return;
+    if (!formData.email.trim()) {
+      return alert("Email is required.");
     }
 
-    // Normal login is complete
-    socket.connect();
+    if (!formData.password.trim()) {
+      return alert("Password is required.");
+    }
 
-    // Join personal room
-    socket.emit("join", response.user.id);
+    try {
+      setLoading(true);
 
-    navigate("/chat/users");
-  } catch (error) {
-    alert(error.message);
-  } finally {
-    setLoading(false);
-  }
-};
+      const response = await login(formData);
+
+      // MFA is required
+      if (response.requiresMfa) {
+        navigate("/mfa-login", {
+          state: {
+            mfaToken: response.mfaToken,
+          },
+        });
+
+        return;
+      }
+
+      // Normal login is complete
+      socket.connect();
+
+      // Join personal room
+      socket.emit("join", response.user.id);
+
+      navigate("/chat/users");
+    } catch (error) {
+      alert(error.message);
+    } finally {
+      setLoading(false);
+    }
+  };
 
   return (
     <div
@@ -119,7 +119,14 @@ const LoginForm = () => {
               </button>
             </div>
           </div>
-
+          <div className="text-end mb-4">
+            <Link
+              to="/forgot-password"
+              className="text-decoration-none fw-semibold"
+            >
+              Forgot Password?
+            </Link>
+          </div>
           <button className="btn btn-secondary w-100" disabled={loading}>
             {loading ? "Logging in..." : "Login"}
           </button>

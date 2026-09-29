@@ -1,14 +1,14 @@
 import BASE_URL from "../../../services/api";
 
 // Register
-export const register = async (userData) => {
+export const register = async (userData,captchaToken) => {
   const response = await fetch(`${BASE_URL}/auth/register`, {
     method: "POST",
     headers: {
       "Content-Type": "application/json",
     },
     credentials: "include",
-    body: JSON.stringify(userData),
+    body: JSON.stringify(userData,captchaToken),
   });
 
   const data = await response.json();
@@ -162,6 +162,77 @@ export const verifyMfaLogin = async (mfaToken, token) => {
         token,
       }),
     },
+  );
+
+  const data = await response.json();
+
+  if (!response.ok) {
+    throw new Error(data.message);
+  }
+
+  return data;
+};
+
+export const forgotPassword = async (email) => {
+  const response = await fetch(
+    `${BASE_URL}/auth/forgot-password`,
+    {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify({ email }),
+    }
+  );
+
+  const data = await response.json();
+
+  if (!response.ok) {
+    throw new Error(data.message);
+  }
+
+  return data;
+};
+
+export const verifyResetOtp = async (email, otp) => {
+  const response = await fetch(
+    `${BASE_URL}/auth/verify-reset-otp`,
+    {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify({
+        email,
+        otp,
+      }),
+    }
+  );
+
+  const data = await response.json();
+
+  if (!response.ok) {
+    throw new Error(data.message);
+  }
+
+  return data;
+};
+export const resetPassword = async (
+  resetToken,
+  newPassword
+) => {
+  const response = await fetch(
+    `${BASE_URL}/auth/reset-password`,
+    {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify({
+        resetToken,
+        newPassword,
+      }),
+    }
   );
 
   const data = await response.json();

@@ -36,7 +36,7 @@ describe("Get Current User", () => {
 
     expect(User.findByPk).toHaveBeenCalledWith(1, {
       attributes: {
-        exclude: ["password"],  
+        exclude: ["password","mfaSecret"],  
       },
     });
   });
